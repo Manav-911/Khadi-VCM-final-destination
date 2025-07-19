@@ -1,0 +1,178 @@
+/* Main calendar container */
+.conference-calendar {
+  height: 75vh;
+  min-height: 600px;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.rbc-date-cell {
+  color: black !important;
+}
+.rbc-calendar {
+  background-color: white;
+  color: black;
+}
+/* Remove default toolbar layout since we use custom one */
+.rbc-toolbar {
+  display: none !important;
+}
+
+/* === Custom Toolbar === */
+.custom-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.custom-toolbar .left,
+.custom-toolbar .center,
+.custom-toolbar .right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.custom-toolbar .left {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.custom-toolbar .center {
+  flex: 1;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.custom-toolbar .right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Toolbar buttons */
+.custom-toolbar button {
+  color: #4a6fa5;
+  border: 1px solid #d0d6e2;
+  background: white;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.custom-toolbar button:hover {
+  background-color: #4a6fa5;
+  color: white;
+}
+
+.custom-toolbar button.rbc-active {
+  background-color: #4a6fa5;
+  color: white;
+  font-weight: 500;
+}
+
+/* Calendar day headers */
+.rbc-header {
+  background: #4a6fa5;
+  color: white;
+  padding: 10px 0;
+  font-weight: 600;
+  text-align: center;
+  font-size: 0.95rem;
+  border: 1px solid #e0e0e0;
+}
+
+/* Event styling */
+.rbc-event {
+  background-color: #4a6fa5;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85rem;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rbc-event-content {
+  white-space: normal !important;
+}
+
+/* Time grid tweaks */
+.rbc-time-view .rbc-time-header {
+  border-top-left-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-time-content {
+  border-top: none;
+}
+
+/* Agenda view improvements */
+.rbc-agenda-view table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rbc-agenda-view td,
+.rbc-agenda-view th {
+  padding: 10px;
+  border: 1px solid #e6e6e6;
+}
+
+.rbc-agenda-time-cell {
+  color: #4a6fa5;
+  font-weight: 500;
+}
+
+.rbc-agenda-date-cell {
+  font-weight: 500;
+  background: #f0f4f9;
+}
+
+.rbc-agenda-event-cell {
+  color: #333;
+}
+
+/* Highlight today's date */
+.rbc-today {
+  background: #eef4fc !important;
+}
+
+/* === Responsive Fixes === */
+@media (max-width: 768px) {
+  .conference-calendar {
+    height: 500px;
+    padding: 10px;
+  }
+
+  .custom-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .custom-toolbar .left,
+  .custom-toolbar .center,
+  .custom-toolbar .right {
+    justify-content: center;
+    flex: none;
+  }
+
+  .custom-toolbar .center {
+    font-size: 1rem;
+  }
+}

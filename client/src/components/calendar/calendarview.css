@@ -1,0 +1,19 @@
+.calendar-wrapper {
+  padding: 20px;
+  background-color: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.calendar-title {
+  margin-bottom: 10px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* Highlight booked days */
+.booked-slot {
+  background: var(--secondary-color) !important;
+  color: white !important;
+  border-radius: 50%;
+}

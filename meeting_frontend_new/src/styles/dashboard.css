@@ -1,0 +1,126 @@
+/* Main Layout */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.dashboard-content {
+  display: flex;
+  flex: 1;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: 250px;
+  background: #2c3e50;
+  color: white;
+  padding: 20px 0;
+  flex-shrink: 0;
+}
+
+.sidebar-section {
+  padding: 0 20px;
+  margin-bottom: 30px;
+}
+
+.sidebar h3 {
+  color: #ecf0f1;
+  border-bottom: 1px solid #4a6fa5;
+  padding-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.action-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  background: transparent;
+  color: #ecf0f1;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.action-btn.active {
+  background: #4a6fa5;
+  font-weight: 500;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+.calendar-section {
+  flex: 2;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.meetings-list-section {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  min-width: 300px;
+}
+
+/* Form View Styles */
+.full-width-view {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .meetings-list-section {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    padding: 10px;
+  }
+  
+  .sidebar-section {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+  }
+  
+  .action-btn {
+    white-space: nowrap;
+    text-align: center;
+  }
+}
+

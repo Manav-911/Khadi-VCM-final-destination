@@ -1,0 +1,149 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #0f1115;
+  color: white;
+}
+
+.container {
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.schedule-btn,
+.simulate-btn,
+.view-approved-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
+.schedule-btn {
+  background: #1d4ed8;
+}
+
+.simulate-btn {
+  background: #16a34a;
+}
+
+.view-approved-btn {
+  background: #0ea5e9;
+}
+
+.content {
+  display: flex;
+  gap: 20px;
+}
+
+.left-panel, .right-panel {
+  background: #1a1d24;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.left-panel {
+  width: 30%;
+  position: relative;
+}
+
+.right-panel {
+  width: 70%;
+}
+
+.clear-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #1f4ed8;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.approve-btn {
+  margin-top: 10px;
+  background: #1f4ed8;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #333;
+}
+
+tr:hover {
+  background-color: #222;
+  cursor: pointer;
+}
+
+.status {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.status.approved {
+  background-color: #14532d;
+  color: #22c55e;
+}
+
+.status.pending {
+  background-color: #78350f;
+  color: #fbbf24;
+}
+
+.approved-panel {
+  background: #1a1d24;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.approved-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.close-approved {
+  background: #dc2626; /* red-600 */
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.close-approved:hover {
+  background: #b91c1c; /* red-700 */
+}
+
