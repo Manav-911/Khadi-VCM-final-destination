@@ -30,6 +30,14 @@ h1 {
   color: white;
 }
 
+.view-declined-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
 .schedule-btn {
   background: #1d4ed8;
 }
@@ -39,6 +47,10 @@ h1 {
 }
 
 .view-approved-btn {
+  background: #0ea5e9;
+}
+
+.view-declined-btn {
   background: #0ea5e9;
 }
 
@@ -75,6 +87,17 @@ h1 {
 }
 
 .approve-btn {
+  margin-top: 10px;
+  background: #1f4ed8;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.decline-btn {
   margin-top: 10px;
   background: #1f4ed8;
   color: white;
@@ -147,3 +170,32 @@ tr:hover {
   background: #b91c1c; /* red-700 */
 }
 
+.declined-panel {
+  background: #1a1d24;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.declined-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.close-declined {
+  background: #dc2626; /* red-600 */
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.close-declined:hover {
+  background: #b91c1c; /* red-700 */
+}
