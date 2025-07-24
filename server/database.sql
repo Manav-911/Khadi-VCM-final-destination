@@ -1,3 +1,0 @@
-CREATE DATABASE data;
-
-CREATE TABLE userdata(id SERIAL PRIMARY KEY, name VARCHAR(255) , username VARCHAR(255), password VARCHAR(255));
