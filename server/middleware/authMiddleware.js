@@ -13,7 +13,14 @@ const authenticateToken = async (req, res, next) => {
     if (err) {
       return res.status(403).json({ messgae: "Invalid Token" });
     }
-    req.user = user;
+
+    console.log(user.id);
+
+    req.user = {
+      userId: user.id,
+      officeId: user.officeId,
+      role: user.role,
+    };
     next();
   });
 };

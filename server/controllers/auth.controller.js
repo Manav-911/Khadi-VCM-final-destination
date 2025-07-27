@@ -10,7 +10,7 @@ const userLogin = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, password")
+      .select("id, email, password, office")
       .eq("email", email)
       .single();
 
@@ -31,6 +31,7 @@ const userLogin = async (req, res) => {
         id: data.id,
         email: data.email,
         role: "user", // 👈 Mark this as user
+        officeId: data.office,
       },
       JWT_SECRET,
       { expiresIn: "9h" }
@@ -49,7 +50,7 @@ const adminLogin = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("admin")
-      .select("id, email, password")
+      .select("id, email, password, office")
       .eq("email", email)
       .single();
 
@@ -70,6 +71,7 @@ const adminLogin = async (req, res) => {
         id: data.id,
         email: data.email,
         role: "admin", // 👈 Mark this as admin
+        officeId: data.office,
       },
       JWT_SECRET,
       { expiresIn: "1h" }
