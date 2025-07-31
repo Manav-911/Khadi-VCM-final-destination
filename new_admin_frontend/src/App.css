@@ -126,6 +126,13 @@ h1 {
   background-color: #2355e6;
   color: white;
 }
+  .active{
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background-color: white;
+    color: black;
+  }
 
 
 .left-panel, .right-panel {
@@ -227,12 +234,6 @@ table {
 th, td {
   padding: 12px;
   border-bottom: 1px solid #333;
-}
-
-tr:hover {
-  background-color: #535555;
-  cursor: pointer;
-  color: white;
 }
 
 .status {
@@ -549,6 +550,11 @@ tr:hover {
   .tr{
     background-color: #195577;
   }
+  .tr:hover{
+    background-color: #535555;
+    cursor: pointer;
+    color: white;
+    }
 
 td, th{
   border-bottom: none;
