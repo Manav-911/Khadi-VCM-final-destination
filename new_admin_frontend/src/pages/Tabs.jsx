@@ -9,6 +9,7 @@ import "../App.css";
 import ScheduleMeeting from "../components/ScheduleMeeting.jsx";
 import Header from "../components/shared/Header.jsx";
 import Footer from "../components/shared/Footer.jsx";
+import ManageUser from "../components/ManageUser.jsx";
 
 function TabsTemp() {
   const navigate = useNavigate();
@@ -26,7 +27,9 @@ function TabsTemp() {
             <button className="btn" onClick={() => setOpenPopup(true)}>
               Schedule Meeting
             </button>
-            <button className="btn">Add user</button>
+            <button className="btn" onClick={() => setOpenPopup(true)}>
+              Add user
+            </button>
           </div>
         </div>
         <div className="model-overlay">
@@ -34,6 +37,9 @@ function TabsTemp() {
             open={openPopup}
             onClose={() => setOpenPopup(false)}
           />
+        </div>
+        <div className="model-overlay">
+          <ManageUser open={openPopup} onClose={() => setOpenPopup(false)} />
         </div>
         <div className="right-panel">
           <div className="button-group">
