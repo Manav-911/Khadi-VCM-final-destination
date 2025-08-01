@@ -7,10 +7,12 @@ import axios from 'axios';
 import { useEffect } from 'react';
 import '../App.css';
 import CalendarView from '../components/calendar/CalendarView.jsx';
+import supabase from '../config/supabaseClient.js';
 const URL = 'http://localhost:5000';
 
 
 function tab1() {
+
     const navigate = useNavigate();
     const [meetings, setMeetings] = useState([]);
     const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -19,7 +21,10 @@ function tab1() {
     const [pendingMeetings, setPendingMeetings] = useState([]);
     const [showApproved, setShowApproved] = useState(false);
     const [showDeclined, setShowDeclined] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
+    const [fetchMeetings, setfetchMeetings] = useState(null);
     const [showPending, setShowPending] = useState(false);
+
      // ✅ Needed for navigation
 
     const handleApprove = async () => {
@@ -65,26 +70,41 @@ function tab1() {
     }
   };
    useEffect(() => {
-  const fetchMeetings = async () => {
-    console.log("📡 Fetching from:", `${URL}/api/request/pending`);
-    try {
-      const response = await axios.get(`${URL}/api/meetings/request/pending`);
-      console.log("✅ Meetings fetched:", response.data);
-      setMeetings(response.data);
-    } catch (error) {
-      console.error("❌ Error fetching meetings:", error);
+
+    const fetchallMeetings = async() =>{
+      const {data, error} = await supabase
+        .from('meetings')
+        .select()
+        .eq('status', 'pending');
+
+        if(error){
+          setFetchError('Could not fetch data')
+          setfetchMeetings(null)
+          console.log(error)
+        }
+        if(data)
+        {
+          setfetchMeetings(data)
+          setFetchError(null)
+        }
     }
-  };
+  // const fetchMeetings = async () => {
+  //   console.log("📡 Fetching from:", `${URL}/api/request/pending`);
+  //   try {
+  //     const response = await axios.get(`${URL}/api/meetings/request/pending`);
+  //     console.log("✅ Meetings fetched:", response.data);
+  //     setMeetings(response.data);
+  //   } catch (error) {
+  //     console.error("❌ Error fetching meetings:", error);
+  //   }
+  // };
 
-  fetchMeetings();
+  fetchallMeetings();
 }, []);
-
 
     return (
       <div className='container'>
-        <div className="left-panel-meeting">
-           <CalendarView/>
-        </div>
+        
         <div className='right-panel-meeting'>
         <div>
           <h3>MEETING DETAILS</h3>
@@ -110,13 +130,13 @@ function tab1() {
               <tr className='meeting-table tr'>
                 <th>ID</th>
                 <th>MEETING TITLE</th>
-                <th>PARTICIPANTS</th>
+                <th>ROOM STATUS</th>
                 <th>DATE & TIME</th>
                 <th>STATUS</th>
               </tr>
             </thead>
             <tbody>
-              {meetings.length === 0 ? (
+              {/* {meetings.length === 0 ? (
                 <tr><td colSpan="5">No meetings yet</td></tr>
               ) : (
                 meetings.map((m) => (
@@ -130,7 +150,26 @@ function tab1() {
                     </td>
                   </tr>
                 ))
-              )}
+              )} */}
+              {fetchError && (<p>{fetchError}</p>)}
+
+                {fetchMeetings === null ? null : (
+                  fetchMeetings.length === 0 ? (
+                    <tr><td colSpan="5">No meetings yet</td></tr>
+                  ) : (
+                    fetchMeetings.map(f => (
+                      <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
+                        <td>{f.id}</td>
+                        <td>{f.title}</td>
+                        <td>{f.want_room?'Yes':'No'}</td>
+                        <td>{f.date} {f.start_time}</td>
+                        <td>
+                          <span className={`status ${f.status?.toLowerCase()}`}>{f.status}</span>
+                        </td>
+                      </tr>
+                    ))
+                  )
+                )}
             </tbody>
             </table>
           </div>

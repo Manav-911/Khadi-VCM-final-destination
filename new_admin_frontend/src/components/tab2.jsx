@@ -7,6 +7,7 @@ import axios from "axios";
 import { useEffect } from "react";
 import "../App.css";
 import CalendarView from "../components/calendar/CalendarView.jsx";
+import supabase from '../config/supabaseClient.js';
 const URL = "http://localhost:5000";
 
 function tab1() {
@@ -17,6 +18,8 @@ function tab1() {
   const [declinedMeetings, setDeclinedMeetings] = useState([]);
   const [pendingMeetings, setPendingMeetings] = useState([]);
   const [showApproved, setShowApproved] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+  const [fetchMeetings, setfetchMeetings] = useState(null);
   const [showDeclined, setShowDeclined] = useState(false);
   const [showPending, setShowPending] = useState(false);
   // ✅ Needed for navigation
@@ -82,25 +85,40 @@ function tab1() {
     }
   };
   useEffect(() => {
-    const fetchMeetings = async () => {
-      console.log("📡 Fetching from:", `${URL}/api/request/approve`);
-      try {
-        const response = await axios.get(`${URL}/api/meetings/request/approve`);
-        console.log("✅ Meetings fetched:", response.data);
-        setMeetings(response.data);
-      } catch (error) {
-        console.error("❌ Error fetching meetings:", error);
-      }
-    };
 
-    fetchMeetings();
+    const fetchallMeetings = async() =>{
+      const {data, error} = await supabase
+        .from('meetings')
+        .select()
+        .eq('status', 'approved');
+
+        if(error){
+          setFetchError('Could not fetch data')
+          setfetchMeetings(null)
+          console.log(error)
+        }
+        if(data)
+        {
+          setfetchMeetings(data)
+          setFetchError(null)
+        }
+    }
+    // const fetchMeetings = async () => {
+    //   console.log("📡 Fetching from:", `${URL}/api/request/approve`);
+    //   try {
+    //     const response = await axios.get(`${URL}/api/meetings/request/approve`);
+    //     console.log("✅ Meetings fetched:", response.data);
+    //     setMeetings(response.data);
+    //   } catch (error) {
+    //     console.error("❌ Error fetching meetings:", error);
+    //   }
+    // };
+
+    fetchallMeetings();
   }, []);
 
   return (
     <div className="container">
-      <div className="left-panel-meeting">
-        <CalendarView />
-      </div>
       <div className="right-panel-meeting">
         <div>
           <h3>MEETING DETAILS</h3>
@@ -162,7 +180,7 @@ function tab1() {
               </tr>
             </thead>
             <tbody>
-              {meetings.length === 0 ? (
+              {/*{meetings.length === 0 ? (
                 <tr>
                   <td colSpan="5">No meetings yet</td>
                 </tr>
@@ -170,10 +188,8 @@ function tab1() {
                 meetings.map((m) => (
                   <tr key={m.id} onClick={() => setSelectedMeeting(m)}>
                     <td>{m.id}</td>
-                    <td>{m.meeting_title}</td> {/* 🔁 fix field name */}
-                    {/* <td>{m.meeting_desc}</td> */}
-                    <td>{m.participants}</td>{" "}
-                    {/* 🔁 use participants as organizer substitute */}
+                    <td>{m.meeting_title}</td>
+                    <td>{m.participants}</td>
                     <td>
                       {m.date} & {m.time}
                     </td>
@@ -184,7 +200,27 @@ function tab1() {
                     </td>
                   </tr>
                 ))
-              )}
+              )}*/}
+
+                {fetchError && (<p>{fetchError}</p>)}
+
+                {fetchMeetings === null ? null : (
+                  fetchMeetings.length === 0 ? (
+                    <tr><td colSpan="5">No meetings yet</td></tr>
+                  ) : (
+                    fetchMeetings.map(f => (
+                      <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
+                        <td>{f.id}</td>
+                        <td>{f.title}</td>
+                        <td>{f.want_room?'Yes':'No'}</td>
+                        <td>{f.date} {f.start_time}</td>
+                        <td>
+                          <span className={`status ${f.status?.toLowerCase()}`}>{f.status}</span>
+                        </td>
+                      </tr>
+                    ))
+                  )
+                )}
             </tbody>
           </table>
         </div>

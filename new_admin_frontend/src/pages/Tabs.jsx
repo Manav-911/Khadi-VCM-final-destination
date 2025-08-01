@@ -9,12 +9,16 @@ import "../App.css";
 import ScheduleMeeting from "../components/ScheduleMeeting.jsx";
 import Header from "../components/shared/Header.jsx";
 import Footer from "../components/shared/Footer.jsx";
-import ManageUser from "../components/ManageUser.jsx";
+import ManageUser from "../components/ManageUsers/ManageUser.jsx";
+import supabase from "../config/supabaseClient.js";
+import CalendarView from "../components/calendar/CalendarView.jsx";
+import AddUser from "../components/ManageUsers/AddUser.jsx";
 
 function TabsTemp() {
   const navigate = useNavigate();
   const [action, setAction] = useState("Tab1");
   const [openPopup, setOpenPopup] = useState(false);
+  const [user, setUser] = useState("cal");
 
   return (
     <div style={{ backgroundColor: "#F5F5F5" }}>
@@ -27,9 +31,9 @@ function TabsTemp() {
             <button className="btn" onClick={() => setOpenPopup(true)}>
               Schedule Meeting
             </button>
-            <button className="btn" onClick={() => setOpenPopup(true)}>
-              Add user
+            <button className="btn" onClick={()=> setUser("manage")}> Manage user
             </button>
+            <button className="btn" onClick={()=> setUser("cal")}>Show Calendar</button>
           </div>
         </div>
         <div className="model-overlay">
@@ -38,15 +42,12 @@ function TabsTemp() {
             onClose={() => setOpenPopup(false)}
           />
         </div>
-        <div className="model-overlay">
-          <ManageUser open={openPopup} onClose={() => setOpenPopup(false)} />
-        </div>
         <div className="right-panel">
           <div className="button-group">
             <button
               className={action === "Tab1" ? "btn" : "btn active"}
               onClick={() => {
-                navigate("/tabs/tab1"), setAction("Tab1");
+                setAction("Tab1");
               }}
             >
               Pending
@@ -54,7 +55,7 @@ function TabsTemp() {
             <button
               className={action === "Tab2" ? "btn" : "btn active"}
               onClick={() => {
-                navigate("/tabs/tab2"), setAction("Tab2");
+                setAction("Tab2");
               }}
             >
               Approved
@@ -62,7 +63,7 @@ function TabsTemp() {
             <button
               className={action === "Tab3" ? "btn" : "btn active"}
               onClick={() => {
-                navigate("/tabs/tab3"), setAction("Tab3");
+                setAction("Tab3");
               }}
             >
               Declined
@@ -70,19 +71,25 @@ function TabsTemp() {
           </div>
         </div>
       </div>
+      <div className="container">
+        <div className="left-panel-meeting">
+          {user==="manage"?<ManageUser/>:null}
+          {user==="cal"?<CalendarView/>:null}
+        </div>
+        <div className="right-panel-meeting">
+          {action==="Tab1"?<Tab1/>:null}
+          {action==="Tab2"?<Tab2/>:null}
+          {action==="Tab3"?<Tab3/>:null}
+        </div>
+      </div>
     </div>
   );
 }
 
 function Tabs() {
-  return (
+   return (
     <>
       <TabsTemp />
-      <Routes>
-        <Route path="tab1" element={<Tab1 />} />
-        <Route path="tab2" element={<Tab2 />} />
-        <Route path="tab3" element={<Tab3 />} />
-      </Routes>
     </>
   );
 }

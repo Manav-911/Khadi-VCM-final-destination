@@ -169,6 +169,7 @@ h1 {
 .container {
   display: flex;
   gap: 20px;
+  height: 800px;
 }
 
 
@@ -196,6 +197,18 @@ h1 {
   top: 20px;
   right: 20px;
   background: #1f4ed8;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-user-btn {
+  position: absolute;
+  top: 188px;
+  left: 800px;
+  background: #FDBF59;
   color: white;
   border: none;
   padding: 6px 10px;
@@ -247,9 +260,10 @@ th, td {
   color: #22c55e;
 }
 
-.status.declined {
+.status.rejected {
   background-color: rgba(255, 0, 0, 0.354);
-  color: rgba(255, 0, 0, 0.937);
+  color: rgba(80, 0, 0, 0.937);
+  border: none;
 }
 
 .status.pending {
@@ -400,7 +414,7 @@ h1 {
 
 .clear-btn {
   position: absolute;
-  top: 20px;
+  top: 200px;
   right: 20px;
   background: #1f4ed8;
   color: white;
