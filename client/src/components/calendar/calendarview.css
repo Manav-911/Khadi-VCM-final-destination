@@ -1,16 +1,8 @@
-.calendar-wrapper {
-  padding: 20px;
-  background-color: var(--white);
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  height: 100%;
-  overflow: hidden;
-}
-
-.calendar-title {
-  margin-bottom: 10px;
-  color: var(--primary-color);
-  font-weight: 600;
+.calendar-header, .calendar-instructions{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-left: 50px;
 }
 
 /* Highlight booked days */

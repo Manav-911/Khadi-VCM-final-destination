@@ -1,3 +1,6 @@
+// This file is not needed for read-only calendar
+// But keeping it in case you need it for your separate request form
+
 const validateMeeting = (req, res, next) => {
   const { title, start_time, duration_minutes, requested_by } = req.body;
 
