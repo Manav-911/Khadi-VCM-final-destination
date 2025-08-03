@@ -8,6 +8,7 @@ export default function CalendarView() {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
 
   // Fetch meetings from API
   const fetchMeetings = async () => {
@@ -32,21 +33,20 @@ export default function CalendarView() {
   const handleEventClick = (clickInfo) => {
     const meeting = clickInfo.event;
     const props = meeting.extendedProps;
-    
-    const meetingInfo = `
-Meeting: ${meeting.title}
-Description: ${props.description || 'No description'}
-Start: ${meeting.start.toLocaleString()}
-End: ${meeting.end.toLocaleString()}
-Status: ${props.status || 'pending'}
-Duration: ${props.duration_minutes || 60} minutes
-Room: ${props.conference_room_name || 'No room assigned'}
-Requested by: ${props.requested_by_name || 'Unknown'}
-${props.link ? `Link: ${props.link}` : ''}
-    `.trim();
 
-    alert(meetingInfo);
+    setSelectedMeeting({
+      title: meeting.title,
+      description: props.description || 'No description',
+      start: meeting.start.toLocaleString(),
+      end: meeting.end.toLocaleString(),
+      status: props.status || 'pending',
+      duration: props.duration_minutes || 60,
+      room: props.conference_room_name || 'No room assigned',
+      requestedBy: props.requested_by_name || 'Unknown',
+      link: props.link || null,
+    });
   };
+
 
   if (loading) {
     return <div className="calendar-loading">Loading meetings...</div>;
@@ -104,6 +104,30 @@ ${props.link ? `Link: ${props.link}` : ''}
           endTime: '17:00'
         }}
       />
+      {selectedMeeting && (
+        <div
+          className="meeting-modal-overlay"
+          onClick={() => setSelectedMeeting(null)}
+        >
+          <div
+            className="meeting-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="close-button" onClick={() => setSelectedMeeting(null)}>×</button>
+            <h2>{selectedMeeting.title}</h2>
+            <p><strong>Description:</strong> {selectedMeeting.description}</p>
+            <p><strong>Start:</strong> {selectedMeeting.start}</p>
+            <p><strong>End:</strong> {selectedMeeting.end}</p>
+            <p><strong>Status:</strong> {selectedMeeting.status}</p>
+            <p><strong>Duration:</strong> {selectedMeeting.duration} minutes</p>
+            <p><strong>Room:</strong> {selectedMeeting.room}</p>
+            <p><strong>Requested by:</strong> {selectedMeeting.requestedBy}</p>
+            {selectedMeeting.link && (
+              <p><strong>Link:</strong> <a href={selectedMeeting.link} target="_blank" rel="noreferrer">{selectedMeeting.link}</a></p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
