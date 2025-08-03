@@ -30,6 +30,61 @@ const getPendingRequests = async (req, res) => {
   res.json(filtered);
 };
 
+const getCancelledMeetings = async (req, res) => {
+  const officeId = req.user.officeId;
+
+  const { data, error } = await supabase
+    .from("meetings")
+    .select(
+      `
+      id,
+      title,
+      start_time,
+      duration_minutes,
+      want_room,
+      requested_by (
+        id,
+        name,
+        office
+      )
+    `
+    )
+    .eq("status", "rejected")
+    .eq("status", "cancelled");
+
+  if (error) return res.status(500).json({ error });
+  const filtered = data.filter((m) => m.requested_by.office === officeId);
+
+  res.status(200).json(filtered);
+};
+
+const getApprovedMeeting = async (req, res) => {
+  const officeId = req.user.officeId;
+
+  const { data, error } = await supabase
+    .from("meetings")
+    .select(
+      `
+      id,
+      title,
+      start_time,
+      duration_minutes,
+      want_room,
+      requested_by (
+        id,
+        name,
+        office
+      )
+    `
+    )
+    .eq("status", "approved");
+
+  if (error) return res.status(500).json({ error });
+  const filtered = data.filter((m) => m.requested_by.office === officeId);
+
+  res.status(200).json(filtered);
+};
+
 const getAvailableRooms = async (req, res) => {
   const { meeting_id } = req.query;
 
@@ -175,4 +230,6 @@ module.exports = {
   getAvailableRooms,
   approveMeeting,
   rejectMeeting,
+  getApprovedMeeting,
+  getCancelledMeetings,
 };

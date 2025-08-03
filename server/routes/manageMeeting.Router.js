@@ -11,6 +11,8 @@ const {
   getAvailableRooms,
   approveMeeting,
   rejectMeeting,
+  getCancelledMeetings,
+  getApprovedMeeting,
 } = require("../controllers/manageMeeting.controller.js");
 
 const manageMeetingRouter = express.Router();
@@ -41,6 +43,20 @@ manageMeetingRouter.post(
   authenticateToken,
   isAdmin,
   rejectMeeting
+);
+
+manageMeetingRouter.get(
+  "/rejectedcancelled-meetings",
+  authenticateToken,
+  isAdmin,
+  getCancelledMeetings
+);
+
+manageMeetingRouter.get(
+  "/approved-meetings",
+  authenticateToken,
+  isAdmin,
+  getApprovedMeeting
 );
 
 module.exports = manageMeetingRouter;
