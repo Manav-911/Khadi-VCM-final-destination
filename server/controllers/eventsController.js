@@ -140,7 +140,51 @@ const getMeetingById = async (req, res) => {
   }
 };
 
+const createMeeting = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      start_time,
+      duration_minutes,
+      status,
+      conference_room_id,
+      want_room,
+      link,
+      requested_by
+    } = req.body;
+
+    const { data, error } = await db
+      .from('meetings')
+      .insert([{
+        title,
+        description,
+        start_time,
+        duration_minutes,
+        status,
+        conference_room_id,
+        want_room,
+        link,
+        requested_by
+      }])
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.status(201).json({ message: 'Meeting created successfully', data });
+  } catch (error) {
+    console.error('Error creating meeting:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+
+
 module.exports = {
   getAllMeetings,
-  getMeetingById
+  getMeetingById,
+  createMeeting
 };

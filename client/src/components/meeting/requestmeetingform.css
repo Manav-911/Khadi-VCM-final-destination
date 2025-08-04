@@ -133,6 +133,11 @@
   letter-spacing: 0.025em;
 }
 
+.form-group textarea{
+  resize: none;
+  overflow: auto;
+}
+
 /* Input & select styles - improved visibility */
 input[type="text"],
 input[type="number"],
@@ -364,7 +369,6 @@ button[type="submit"]:active {
 
 /* End time info */
 .end-time-info {
-  margin-top: 1.5rem;
   color: var(--primary-dark);
   font-weight: 600;
   font-size: 0.95rem;

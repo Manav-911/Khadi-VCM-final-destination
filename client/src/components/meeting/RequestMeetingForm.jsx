@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "../meeting/requestmeetingform.css";
+import axios from 'axios';
+
+
 
 export default function RequestMeetingForm() {
 
@@ -45,11 +48,48 @@ export default function RequestMeetingForm() {
     }
   }, [formData.startHour, formData.startMinute, formData.durationHours, formData.durationMinutes, formData.amPm]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
-    // Submit logic
+
+    // Convert selected date and start time into a valid ISO string
+    const date = formData.date;
+    const hour = parseInt(formData.startHour);
+    const minute = parseInt(formData.startMinute);
+    const isPM = formData.amPm === "PM";
+
+    if (!date || isNaN(hour) || isNaN(minute)) {
+      alert("Please provide a valid date and start time.");
+      return;
+    }
+
+    const startDateTime = new Date(date);
+    startDateTime.setHours((hour % 12) + (isPM ? 12 : 0));
+    startDateTime.setMinutes(minute);
+    startDateTime.setSeconds(0);
+    startDateTime.setMilliseconds(0);
+
+    const formattedDateTime = startDateTime.toISOString(); // 👈🏽 Now it's defined
+
+    try {
+      await axios.post("http://localhost:5000/api/meetings", {
+        title: formData.title,
+        description: formData.description,
+        start_time: formattedDateTime,
+        duration_minutes:
+          parseInt(formData.durationHours || 0) * 60 +
+          parseInt(formData.durationMinutes || 0),
+        want_room: formData.wantsConferenceRoom,
+        status: "pending",
+      });
+      alert("Meeting request submitted!");
+    } catch (err) {
+      console.error(err);
+      alert("Submission failed");
+    }
   };
+
+
+
 
   return (
     <div className="meeting-form-container">
@@ -133,6 +173,11 @@ export default function RequestMeetingForm() {
                 onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
                 required
               />
+              {endTime && (
+                <div className="end-time-info">
+                  Meeting will end at: <strong>{endTime}</strong>
+                </div>
+              )}
             </div>
           </div>
 
@@ -169,11 +214,6 @@ export default function RequestMeetingForm() {
 
           <button type="submit">Submit Request</button>
 
-          {endTime && (
-            <div className="end-time-info">
-              Meeting will end at: <strong>{endTime}</strong>
-            </div>
-          )}
         </form>
       </div>
     </div>
