@@ -3,11 +3,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "../meeting/requestmeetingform.css";
 import axios from 'axios';
-
-
+import { useMeetingContext } from "../../context/MeetingContext";
 
 export default function RequestMeetingForm() {
-
   const [formData, setFormData] = useState({
     title: "",
     date: null,
@@ -16,9 +14,11 @@ export default function RequestMeetingForm() {
     amPm: "",
     durationHours: "",
     durationMinutes: "",
-    wantsConferenceRoom: false, // Added this line
+    wantsConferenceRoom: false,
     description: ""
   });
+
+  const { triggerRefresh } = useMeetingContext();
 
   const [endTime, setEndTime] = useState("");
 
@@ -34,7 +34,7 @@ export default function RequestMeetingForm() {
       const durationHrs = parseInt(formData.durationHours);
       const durationMins = parseInt(formData.durationMinutes);
 
-      let totalMinutes = hours % 12 * 60 + minutes + durationHrs * 60 + durationMins;
+      let totalMinutes = (hours % 12) * 60 + minutes + durationHrs * 60 + durationMins;
       if (formData.amPm === "PM") totalMinutes += 12 * 60;
 
       const endHours24 = Math.floor(totalMinutes / 60) % 24;
@@ -46,12 +46,19 @@ export default function RequestMeetingForm() {
     } else {
       setEndTime("");
     }
-  }, [formData.startHour, formData.startMinute, formData.durationHours, formData.durationMinutes, formData.amPm]);
+  }, [
+    formData.startHour,
+    formData.startMinute,
+    formData.durationHours,
+    formData.durationMinutes,
+    formData.amPm
+  ]);
+
+  const pad = (n) => n.toString().padStart(2, "0");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Convert selected date and start time into a valid ISO string
     const date = formData.date;
     const hour = parseInt(formData.startHour);
     const minute = parseInt(formData.startMinute);
@@ -63,40 +70,47 @@ export default function RequestMeetingForm() {
     }
 
     const startDateTime = new Date(date);
-    startDateTime.setHours((hour % 12) + (isPM ? 12 : 0));
+    const hour24 = (hour % 12) + (isPM && hour !== 12 ? 12 : 0);
+    startDateTime.setHours(hour24);
     startDateTime.setMinutes(minute);
     startDateTime.setSeconds(0);
     startDateTime.setMilliseconds(0);
 
-    const formattedDateTime = startDateTime.toISOString(); // 👈🏽 Now it's defined
+    // Format in LOCAL time (not UTC)
+    const formattedDateTime = `${startDateTime.getFullYear()}-${pad(
+      startDateTime.getMonth() + 1
+    )}-${pad(startDateTime.getDate())}T${pad(startDateTime.getHours())}:${pad(
+      startDateTime.getMinutes()
+    )}:${pad(startDateTime.getSeconds())}`;
+
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      start_time: formattedDateTime,
+      duration_minutes:
+        parseInt(formData.durationHours || 0) * 60 +
+        parseInt(formData.durationMinutes || 0),
+      want_room: formData.wantsConferenceRoom,
+      status: "pending",
+    };
+
+    console.log("Sending payload:", payload);
 
     try {
-      await axios.post("http://localhost:5000/api/meetings", {
-        title: formData.title,
-        description: formData.description,
-        start_time: formattedDateTime,
-        duration_minutes:
-          parseInt(formData.durationHours || 0) * 60 +
-          parseInt(formData.durationMinutes || 0),
-        want_room: formData.wantsConferenceRoom,
-        status: "pending",
-      });
+      await axios.post("http://localhost:5000/api/meetings", payload);
       alert("Meeting request submitted!");
+      triggerRefresh();
     } catch (err) {
-      console.error(err);
+      console.error("Submission error:", err.response?.data || err.message);
       alert("Submission failed");
     }
   };
-
-
-
 
   return (
     <div className="meeting-form-container">
       <div className="form-wrapper">
         <h2 className="form-title">Request a Meeting</h2>
         <form className="request-form" onSubmit={handleSubmit}>
-
           <div className="form-group">
             <label>Title</label>
             <input
@@ -189,7 +203,9 @@ export default function RequestMeetingForm() {
                   type="checkbox"
                   className="hidden-checkbox"
                   checked={formData.wantsConferenceRoom}
-                  onChange={(e) => setFormData({ ...formData, wantsConferenceRoom: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, wantsConferenceRoom: e.target.checked })
+                  }
                 />
                 <div className="custom-checkbox">
                   <svg className="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -213,7 +229,6 @@ export default function RequestMeetingForm() {
           </div>
 
           <button type="submit">Submit Request</button>
-
         </form>
       </div>
     </div>

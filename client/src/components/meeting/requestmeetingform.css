@@ -1,22 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-:root {
-  --primary-color: #3b82f6;
-  --primary-light: #60a5fa;
-  --primary-dark: #1d4ed8;
-
-  --secondary-color: #f59e0b;
-  --secondary-light: #fbbf24;
-  --secondary-dark: #d97706;
-
-  --black: #000000;
-  --text-color: #1f2937;
-  --gray: #6b7280;
-  --light-gray: #e5e7eb;
-  --lighter-gray: #f9fafb;
-  --white: #ffffff;
-  --background: #f8fafc;
-}
 
 /* Main container to fit within .target section */
 .meeting-form-container {
@@ -215,6 +198,24 @@ select:hover {
   min-width: 90px;
   max-width: 100px;
   font-weight: 600;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: white; /* optional */
+  padding-right: 0.5rem; /* space for custom arrow */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  height: 36px;
+  position: relative;
+}
+
+.ampm-select::after {
+  content: "▼";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 /* Custom Checkbox Styles */
