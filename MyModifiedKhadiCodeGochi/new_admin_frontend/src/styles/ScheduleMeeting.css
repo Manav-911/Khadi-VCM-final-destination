@@ -1,0 +1,87 @@
+/* Dimmed background */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* translucent black */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999; /* appear above everything */
+  scroll-behavior: smooth;
+}
+
+/* Form container */
+.popup {
+  background: #fff;
+  padding: 30px 25px;
+  border-radius: 12px;
+  width: 360px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease;
+}
+
+/* Form header */
+.popup h2 {
+  margin-top: 0;
+  font-size: 22px;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
+}
+
+/* Input fields */
+.popup input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 16px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Form buttons */
+.popup button {
+  padding: 10px 16px;
+  margin: 5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.popup button[type="submit"] {
+  background-color: #2355e6;
+  color: white;
+}
+
+.popup button[type="button"] {
+  background-color: #2355e6;
+  color: white;
+}
+
+/* Close (X) button */
+.popup > button:first-child {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #555;
+  cursor: pointer;
+}
+
+/* Slide-in animation */
+@keyframes slideIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
