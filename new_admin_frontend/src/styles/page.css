@@ -1,0 +1,48 @@
+.tabs{
+    display: flex;
+    color: rgb(232, 48, 48);
+}
+  .button{
+    background-color: white;
+    color: black;
+    border-color: #1a1d24;
+  }
+
+
+
+/* body {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  color: white;
+  font-family: sans-serif;
+} */
+
+
+button{
+  background-color: black;
+  color: white;
+}
+.tab1{
+    background-color: black;
+    color: white;
+}
+.tab2{
+    background-color: black;
+    color: white;
+}
+.tab3{
+    background-color: black;
+    color: white;
+}
+.home{
+    background-color: white;
+}
+.tab1,
+.tab2,
+.tab3 {
+  background-color: black;
+  color: white;
+  padding: 20px;
+  min-height: 80vh;
+}

@@ -1,0 +1,18 @@
+{
+  "name": "khadi_vcm",
+  "version": "1.0.0",
+  "description": "meeting management web-application",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev:server": "cd new_server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:admin": "cd new_admin_frontend && npm run dev",
+    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:admin\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,110 @@
+.calendar-wrapper {
+  padding: 20px;
+  background-color: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  color: black;
+}
+
+.calendar-title {
+  margin-bottom: 10px;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* Highlight booked days */
+.booked-slot {
+  background: var(--secondary-color) !important;
+  color: white !important;
+  border-radius: 50%;
+}
+/* Make each event visually distinct */
+.fc-event {
+  background-color: #4CAF50 !important; /* Green background */
+  color: white !important;              /* White text */
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 14px;
+  padding: 2px 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* Tooltip when hovering (if using 'title' attribute for description) */
+.fc-event:hover {
+  opacity: 0.9;
+}
+
+/* Customize time grid view background */
+.fc-timegrid-slot {
+  background-color: #fdfdfd;
+}
+
+.fc-timegrid-slot-label {
+  font-weight: bold;
+  color: #333;
+}
+
+.fc-timegrid-now-indicator {
+  background-color: red !important;
+}
+
+.fc-timegrid-now-indicator-arrow {
+  display: none;
+}
+
+.calendar-header, .calendar-instructions{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-left: 50px;
+}
+
+/* Highlight booked days */
+.booked-slot {
+  background: var(--secondary-color) !important;
+  color: white !important;
+  border-radius: 50%;
+}
+
+.meeting-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.meeting-modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: #666;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
