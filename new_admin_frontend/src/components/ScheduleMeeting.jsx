@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import '../styles/ScheduleMeeting.css';
+import React, { useEffect, useState } from "react";
+import "../styles/ScheduleMeeting.css";
 import TextField from "@mui/material/TextField";
-import supabase from '../config/supabaseClient';
+import supabase from "../config/supabaseClient";
 
 function ScheduleMeeting({ open, onClose }) {
   if (!open) return null;
 
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [duration, setDuration] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Approved');
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [duration, setDuration] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState("Approved");
 
   const [participants, setParticipants] = useState([]); // fetched data
   const [selectedParticipants, setSelectedParticipants] = useState([]); // selected
@@ -21,13 +21,12 @@ function ScheduleMeeting({ open, onClose }) {
   // Fetch participants from Supabase on load
   useEffect(() => {
     const fetchParticipants = async () => {
-      const { data, error } = await supabase.from('users').select('id,name');
+      const { data, error } = await supabase.from("users").select("id,name");
       if (error) console.log(error);
-      else 
-        {
-          console.log("Participation list : ",data);
-          setParticipants(data);
-        }
+      else {
+        console.log("Participation list : ", data);
+        setParticipants(data);
+      }
     };
     fetchParticipants();
   }, []);
@@ -42,24 +41,24 @@ function ScheduleMeeting({ open, onClose }) {
 
   const handleCheckboxChange = (e, name) => {
     if (e.target.checked) {
-      setSelectedParticipants(prev => [...prev, name]);
+      setSelectedParticipants((prev) => [...prev, name]);
     } else {
-      setSelectedParticipants(prev => prev.filter(p => p !== name));
+      setSelectedParticipants((prev) => prev.filter((p) => p !== name));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('meetings').insert([{
-      title,
-      start_time,
-      status,
-      description
-    }])
-    
-    const {err} = await supabase.from('meeting_participants').insert([{
-      
-    }]);
+    const { error } = await supabase.from("meetings").insert([
+      {
+        title,
+        start_time,
+        status,
+        description,
+      },
+    ]);
+
+    const { err } = await supabase.from("meeting_participants").insert([{}]);
 
     if (error) {
       console.error("Insert failed:", error);
@@ -74,11 +73,37 @@ function ScheduleMeeting({ open, onClose }) {
       <div className="popup">
         <h2>Schedule a Meeting</h2>
         <form onSubmit={handleSubmit}>
-          <input type="text" name="title" placeholder="Meeting Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          <input type="text" name="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
-          <input type="time" name="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+          <input
+            type="text"
+            name="title"
+            placeholder="Meeting Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+          <input
+            type="time"
+            name="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+          />
           <input type="text" name="status" value={status} readOnly required />
-          <input type="number" name="duration" placeholder="Duration in minutes" value={duration} onChange={(e) => setDuration(e.target.value)} required />
+          <input
+            type="number"
+            name="duration"
+            placeholder="Duration in minutes"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            required
+          />
 
           <div>
             <TextField
@@ -91,7 +116,7 @@ function ScheduleMeeting({ open, onClose }) {
             />
 
             {showParticipantsButton && (
-              <div style={{ marginTop: '10px' }}>
+              <div style={{ marginTop: "10px" }}>
                 <button
                   type="button"
                   className="btn"
@@ -110,35 +135,34 @@ function ScheduleMeeting({ open, onClose }) {
             )}
 
             {showParticipantsList && (
-            <div className="participants-list">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Select</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {participants.map((user) => (
-                    <tr key={user.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          id={`participant-${user.id}`}
-                          value={user.name}
-                          onChange={(e) => handleCheckboxChange(e, user.name)}
-                        />
-                      </td>
-                      <td>{user.id}</td>
-                      <td>{user.name}</td>
+              <div className="participants-list">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>ID</th>
+                      <th>Name</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
+                  </thead>
+                  <tbody>
+                    {participants.map((user) => (
+                      <tr key={user.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            id={`participant-${user.id}`}
+                            value={user.name}
+                            onChange={(e) => handleCheckboxChange(e, user.name)}
+                          />
+                        </td>
+                        <td>{user.id}</td>
+                        <td>{user.name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <textarea
@@ -149,7 +173,9 @@ function ScheduleMeeting({ open, onClose }) {
           />
           <br />
           <button type="submit">Submit</button>
-          <button type="button" onClick={onClose}>Close</button>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
         </form>
       </div>
     </div>

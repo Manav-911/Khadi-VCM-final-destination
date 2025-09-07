@@ -6,7 +6,7 @@ async function checkLicense(officeId, newStartTime, endTime) {
     const { data: officeLicenses, error: licenseError } = await supabase
       .from("licenses")
       .select("id")
-      .eq("office_id", officeId); // requires licenses.office_id column
+      .eq("office_id", officeId);
 
     if (licenseError) {
       console.error("Error fetching office licenses:", licenseError);
@@ -18,9 +18,10 @@ async function checkLicense(officeId, newStartTime, endTime) {
       return true; // no license = cannot schedule
     }
 
+    const licenseCount = officeLicenses.length;
     const licenseIds = officeLicenses.map((l) => l.id);
 
-    // 2. Fetch meetings that are approved and tied to those licenses
+    // 2. Fetch approved meetings tied to those licenses
     const { data: meetings, error: meetingError } = await supabase
       .from("meetings")
       .select("license, start_time, duration_minutes")
@@ -32,16 +33,38 @@ async function checkLicense(officeId, newStartTime, endTime) {
       return true;
     }
 
-    // 3. Check for overlap
-    const isOverlapping = meetings.some((meeting) => {
-      const meetingStart = new Date(meeting.start_time);
-      const meetingEnd = new Date(
-        meetingStart.getTime() + meeting.duration_minutes * 60000
+    let overlapCount = 0;
+
+    // Convert once
+    const reqStart = new Date(newStartTime).getTime();
+    const reqEnd = new Date(endTime).getTime();
+
+    console.log("Request Window:", reqStart, "->", reqEnd);
+
+    meetings.forEach((meeting, idx) => {
+      const meetingStart = new Date(meeting.start_time).getTime();
+      const meetingEnd =
+        meetingStart + (meeting.duration_minutes || 60) * 60000;
+
+      const isOverlap = !(meetingEnd <= reqStart || meetingStart >= reqEnd);
+
+      console.log(
+        `Meeting ${idx + 1}:`,
+        meeting.start_time,
+        "->",
+        new Date(meetingEnd).toISOString(),
+        "| Overlap:",
+        isOverlap
       );
-      return !(meetingEnd <= newStartTime || meetingStart >= endTime);
+
+      if (isOverlap) overlapCount++;
     });
 
-    return isOverlapping;
+    console.log(
+      `Office ${officeId} - Overlapping licenses: ${overlapCount}/${licenseCount}`
+    );
+
+    return overlapCount >= licenseCount;
   } catch (error) {
     console.error("ERROR in checkLicense:", error);
     return true;
@@ -51,44 +74,55 @@ async function checkLicense(officeId, newStartTime, endTime) {
 // Check if any room is available in the requested time slot
 async function checkRoom(officeId, newStartTime, endTime) {
   try {
+    // 1. Fetch all rooms for this office
     const { data: rooms, error: roomError } = await supabase
       .from("conference_room")
       .select("id")
       .eq("office_id", officeId);
 
-    if (roomError || !rooms) {
+    if (roomError) {
       console.error("Error fetching rooms: ", roomError);
       return false;
     }
 
-    const roomIds = rooms.map((room) => room.id);
-    if (roomIds.length === 0) return false;
+    if (!rooms || rooms.length === 0) {
+      console.warn("No rooms found for this office:", officeId);
+      return false;
+    }
 
+    const roomIds = rooms.map((room) => room.id);
+
+    // 2. Fetch approved meetings in these rooms
     const { data: meetings, error: meetingError } = await supabase
       .from("meetings")
       .select("conference_room_id, start_time, duration_minutes")
       .eq("status", "approved")
       .in("conference_room_id", roomIds);
 
-    if (meetingError || !meetings) {
+    if (meetingError) {
       console.error("Error fetching meetings: ", meetingError);
       return false;
     }
 
-    const busyRoomIds = new Set();
+    // 3. Track how many rooms are busy in that slot
+    const busyRooms = new Set();
 
     meetings.forEach((meeting) => {
-      const start = new Date(meeting.start_time);
-      const end = new Date(start.getTime() + meeting.duration_minutes * 60000);
-      const isOverlap = !(end <= newStartTime || start >= endTime);
+      const meetingStart = new Date(meeting.start_time);
+      const meetingEnd = new Date(
+        meetingStart.getTime() + meeting.duration_minutes * 60000
+      );
 
+      const isOverlap = !(
+        meetingEnd <= newStartTime || meetingStart >= endTime
+      );
       if (isOverlap) {
-        busyRoomIds.add(meeting.conference_room_id);
+        busyRooms.add(meeting.conference_room_id);
       }
     });
 
-    const availableRoomId = roomIds.find((id) => !busyRoomIds.has(id));
-    return !!availableRoomId; // Return true if found, false otherwise
+    // 4. If busyRooms < total rooms → at least 1 free room
+    return busyRooms.size < roomIds.length;
   } catch (error) {
     console.error("ERROR in checkRoom: ", error);
     return false;
@@ -112,7 +146,10 @@ const addMeeting = async (req, res) => {
   } = req.body;
 
   const newStartTime = new Date(start_time);
+  console.log(newStartTime);
+
   const endTime = new Date(newStartTime.getTime() + duration_minutes * 60000);
+  console.log(endTime);
 
   const licenseBusy = await checkLicense(officeId, newStartTime, endTime);
   if (licenseBusy) {
@@ -140,7 +177,7 @@ const addMeeting = async (req, res) => {
       {
         title,
         description,
-        start_time: newStartTime,
+        start_time: start_time,
         duration_minutes: duration_minutes,
         requested_by: userId,
         status: "pending", // initially pending
@@ -226,7 +263,11 @@ const getApprovedMeetingUser = async (req, res) => {
     // Transform data to match FullCalendar format
     const formattedEvents = data.map((meeting) => {
       // Calculate end time based on start_time + duration_minutes
-      const startTime = new Date(meeting.start_time);
+      const startTime = new Date(
+        meeting.start_time.includes("T")
+          ? meeting.start_time
+          : meeting.start_time.replace(" ", "T") + "Z" // force ISO
+      );
       const endTime = new Date(
         startTime.getTime() + (meeting.duration_minutes || 60) * 60000
       );
@@ -234,7 +275,7 @@ const getApprovedMeetingUser = async (req, res) => {
       return {
         id: meeting.id,
         title: meeting.title,
-        start: meeting.start_time,
+        start: startTime.toISOString(),
         end: endTime.toISOString(),
         extendedProps: {
           description: meeting.description,

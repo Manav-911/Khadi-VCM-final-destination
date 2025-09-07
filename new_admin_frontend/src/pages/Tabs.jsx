@@ -13,6 +13,7 @@ import ManageUser from "../components/ManageUsers/ManageUser.jsx";
 import supabase from "../config/supabaseClient.js";
 import CalendarView from "../components/calendar/CalendarView.jsx";
 import AddUser from "../components/ManageUsers/AddUser.jsx";
+import { useEffect } from "react";
 
 function TabsTemp() {
   const navigate = useNavigate();
@@ -31,9 +32,13 @@ function TabsTemp() {
             <button className="btn" onClick={() => setOpenPopup(true)}>
               Schedule Meeting
             </button>
-            <button className="btn" onClick={()=> setUser("manage")}> Manage user
+            <button className="btn" onClick={() => setUser("manage")}>
+              {" "}
+              Manage user
             </button>
-            <button className="btn" onClick={()=> setUser("cal")}>Show Calendar</button>
+            <button className="btn" onClick={() => setUser("cal")}>
+              Show Calendar
+            </button>
           </div>
         </div>
         <div className="model-overlay">
@@ -73,13 +78,13 @@ function TabsTemp() {
       </div>
       <div className="container">
         <div className="left-panel-meeting">
-          {user==="manage"?<ManageUser/>:null}
-          {user==="cal"?<CalendarView/>:null}
+          {user === "manage" ? <ManageUser /> : null}
+          {user === "cal" ? <CalendarView /> : null}
         </div>
         <div className="right-panel-meeting">
-          {action==="Tab1"?<Tab1/>:null}
-          {action==="Tab2"?<Tab2/>:null}
-          {action==="Tab3"?<Tab3/>:null}
+          {action === "Tab1" ? <Tab1 /> : null}
+          {action === "Tab2" ? <Tab2 /> : null}
+          {action === "Tab3" ? <Tab3 /> : null}
         </div>
       </div>
     </div>
@@ -87,7 +92,26 @@ function TabsTemp() {
 }
 
 function Tabs() {
-   return (
+  useEffect(() => {
+    console.log("FULL URL:", window.location.href);
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    //console.log("TOKEN FROM URL:", token);
+
+    if (token) {
+      localStorage.setItem("token", token);
+      // console.log(
+      //   "Token saved in localStorage:",
+      //   localStorage.getItem("token")
+      // );
+
+      // Optional: clean up URL
+      window.history.replaceState({}, document.title, "/tabs");
+    } else {
+      console.warn("⚠️ No token found in URL");
+    }
+  }, []);
+  return (
     <>
       <TabsTemp />
     </>

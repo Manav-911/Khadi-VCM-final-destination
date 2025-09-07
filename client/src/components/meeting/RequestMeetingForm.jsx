@@ -277,7 +277,7 @@ export default function RequestMeetingForm() {
     date: null,
     startHour: "",
     startMinute: "",
-    amPm: "",
+    amPm: "AM",
     durationHours: "",
     durationMinutes: "",
     wantsConferenceRoom: false,
@@ -386,11 +386,13 @@ export default function RequestMeetingForm() {
     startDateTime.setSeconds(0);
     startDateTime.setMilliseconds(0);
 
-    const formattedDateTime = `${startDateTime.getFullYear()}-${pad(
-      startDateTime.getMonth() + 1
-    )}-${pad(startDateTime.getDate())}T${pad(startDateTime.getHours())}:${pad(
-      startDateTime.getMinutes()
-    )}:${pad(startDateTime.getSeconds())}`;
+    // const formattedDateTime = `${startDateTime.getFullYear()}-${pad(
+    //   startDateTime.getMonth() + 1
+    // )}-${pad(startDateTime.getDate())}T${pad(startDateTime.getHours())}:${pad(
+    //   startDateTime.getMinutes()
+    // )}:${pad(startDateTime.getSeconds())}`;
+
+    const formattedDateTime = startDateTime.toISOString(); // use ISO format
 
     const payload = {
       title: formData.title,

@@ -22,7 +22,24 @@ export default function CalendarView() {
       );
       console.log(meetingsData);
 
-      setMeetings(meetingsData.data);
+      const formatted = meetingsData.data.map((m) => {
+        // ✅ Normalize start_time
+        const safeStart = new Date(
+          m.start.includes("T") ? m.start : m.start.replace(" ", "T") + "Z"
+        );
+
+        const safeEnd = new Date(
+          m.end.includes("T") ? m.end : m.end.replace(" ", "T") + "Z"
+        );
+
+        return {
+          ...m,
+          start: safeStart.toISOString(),
+          end: safeEnd.toISOString(),
+        };
+      });
+
+      setMeetings(formatted);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch meetings:", err);

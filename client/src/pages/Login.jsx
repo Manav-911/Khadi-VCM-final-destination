@@ -93,8 +93,9 @@ export default function Login() {
 
       if (response.data.success) {
         setLoginSuccess(true);
-        localStorage.setItem("token", response.data.token);
-        window.location.href = "http://localhost:5174/tabs";
+        console.log(response.data.token);
+
+        window.location.href = `http://localhost:5174/tabs?token=${response.data.token}`;
       } else {
         setErrors({ server: response.data.message || "Login failed" });
       }

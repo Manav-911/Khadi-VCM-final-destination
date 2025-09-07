@@ -7,7 +7,7 @@ import axios from "axios";
 import { useEffect } from "react";
 import "../App.css";
 import CalendarView from "../components/calendar/CalendarView.jsx";
-import supabase from '../config/supabaseClient.js';
+import supabase from "../config/supabaseClient.js";
 const URL = "http://localhost:5000";
 
 function tab1() {
@@ -18,7 +18,7 @@ function tab1() {
   const [declinedMeetings, setDeclinedMeetings] = useState([]);
   const [pendingMeetings, setPendingMeetings] = useState([]);
   const [fetchError, setFetchError] = useState(false);
-    const [fetchMeetings, setfetchMeetings] = useState(null);
+  const [fetchMeetings, setfetchMeetings] = useState(null);
   const [showApproved, setShowApproved] = useState(false);
   const [showDeclined, setShowDeclined] = useState(false);
   const [showPending, setShowPending] = useState(false);
@@ -84,34 +84,36 @@ function tab1() {
       console.error("Error pending meeting:", err);
     }
   };
+  //useEffect(() => {
+  // const fetchMeetings = async () => {
+  //   console.log("📡 Fetching from:", `${URL}/api/request/decline`);
+  //   try {
+  //     const response = await axios.get(`${URL}/api/meetings/request/decline`);
+  //     console.log("✅ Meetings fetched:", response.data);
+  //     setMeetings(response.data);
+  //   } catch (error) {
+  //     console.error("❌ Error fetching meetings:", error);
+  //   }
+  // };
   useEffect(() => {
-    // const fetchMeetings = async () => {
-    //   console.log("📡 Fetching from:", `${URL}/api/request/decline`);
-    //   try {
-    //     const response = await axios.get(`${URL}/api/meetings/request/decline`);
-    //     console.log("✅ Meetings fetched:", response.data);
-    //     setMeetings(response.data);
-    //   } catch (error) {
-    //     console.error("❌ Error fetching meetings:", error);
-    //   }
-    // };
-    const fetchallMeetings = async() =>{
-      const {data, error} = await supabase
-        .from('meetings')
-        .select()
-        .eq('status', 'rejected');
+    const fetchallMeetings = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "http://localhost:3000/admin/rejectedcancelled-meetings",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log("✅ Meetings fetched:", response.data);
 
-        if(error){
-          setFetchError('Could not fetch data')
-          setfetchMeetings(null)
-          console.log(error)
-        }
-        if(data)
-        {
-          setfetchMeetings(data)
-          setFetchError(null)
-        }
-    }
+        // ✅ response.data contains the API result
+        setfetchMeetings(response.data);
+        setFetchError(null);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        setFetchError("Could not fetch data");
+        setfetchMeetings(null);
+      }
+    };
 
     fetchallMeetings();
   }, []);
@@ -199,25 +201,29 @@ function tab1() {
                   </tr>
                 ))
               )}*/}
-              {fetchError && (<p>{fetchError}</p>)}
+              {fetchError && <p>{fetchError}</p>}
 
-                {fetchMeetings === null ? null : (
-                  fetchMeetings.length === 0 ? (
-                    <tr><td colSpan="5">No meetings yet</td></tr>
-                  ) : (
-                    fetchMeetings.map(f => (
-                      <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
-                        <td>{f.id}</td>
-                        <td>{f.title}</td>
-                        <td>{f.want_room?'Yes':'No'}</td>
-                        <td>{f.date} {f.start_time}</td>
-                        <td>
-                          <span className={`status ${f.status?.toLowerCase()}`}>{f.status}</span>
-                        </td>
-                      </tr>
-                    ))
-                  )
-                )}
+              {fetchMeetings === null ? null : fetchMeetings.length === 0 ? (
+                <tr>
+                  <td colSpan="5">No meetings yet</td>
+                </tr>
+              ) : (
+                fetchMeetings.map((f) => (
+                  <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
+                    <td>{f.id}</td>
+                    <td>{f.title}</td>
+                    <td>{f.want_room ? "Yes" : "No"}</td>
+                    <td>
+                      {f.date} {f.start_time}
+                    </td>
+                    <td>
+                      <span className={`status ${f.status?.toLowerCase()}`}>
+                        {f.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

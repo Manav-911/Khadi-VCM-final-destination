@@ -17,6 +17,6 @@ manageUserRouter.get(
 
 manageUserRouter.post("/addUser", authenticateToken, isAdmin, addUser);
 
-manageUserRouter.post("/deleteUser", authenticateToken, isAdmin, deleteUser);
+manageUserRouter.delete("/deleteUser", authenticateToken, isAdmin, deleteUser);
 
 module.exports = manageUserRouter;

@@ -27,6 +27,7 @@ const authenticateToken = async (req, res, next) => {
 
 const isAdmin = async (req, res, next) => {
   if (req.user?.role != "admin") {
+    console.log("Admin access only");
     return res.status(401).json({ message: "Admin access only" });
   }
   next();

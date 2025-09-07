@@ -49,8 +49,7 @@ const getCancelledMeetings = async (req, res) => {
       )
     `
     )
-    .eq("status", "rejected")
-    .eq("status", "cancelled");
+    .in("status", ["rejected", "cancelled"]);
 
   if (error) return res.status(500).json({ error });
   const filtered = data.filter((m) => m.requested_by.office === officeId);
@@ -223,6 +222,176 @@ const rejectMeeting = async (req, res) => {
   res.json({
     success: true,
     message: "Meeting rejected and participants removed",
+  });
+};
+
+async function checkLicense(officeId, newStartTime, endTime) {
+  try {
+    const { data: officeLicenses, error: licenseError } = await supabase
+      .from("licenses")
+      .select("id")
+      .eq("office_id", officeId);
+
+    if (licenseError || !officeLicenses || officeLicenses.length === 0) {
+      return null; // no license available
+    }
+
+    const licenseIds = officeLicenses.map((l) => l.id);
+
+    const { data: meetings, error: meetingError } = await supabase
+      .from("meetings")
+      .select("license, start_time, duration_minutes")
+      .eq("status", "approved")
+      .in("license", licenseIds);
+
+    if (meetingError) return null;
+
+    // Find the first license that is free
+    for (let license of licenseIds) {
+      const overlapping = meetings.some(
+        (m) =>
+          m.license === license &&
+          !(
+            new Date(m.start_time).getTime() +
+              (m.duration_minutes || 60) * 60000 <=
+              newStartTime.getTime() ||
+            new Date(m.start_time).getTime() >= endTime.getTime()
+          )
+      );
+      if (!overlapping) return license;
+    }
+
+    return null; // no free license
+  } catch (error) {
+    console.error("ERROR in getAvailableLicense:", error);
+    return null;
+  }
+}
+
+// Check if any room is available in the requested time slot
+async function checkRoom(officeId, newStartTime, endTime) {
+  try {
+    const { data: rooms, error: roomError } = await supabase
+      .from("conference_room")
+      .select("id")
+      .eq("office_id", officeId);
+
+    if (roomError || !rooms || rooms.length === 0) return null;
+
+    const roomIds = rooms.map((r) => r.id);
+
+    const { data: meetings, error: meetingError } = await supabase
+      .from("meetings")
+      .select("conference_room_id, start_time, duration_minutes")
+      .eq("status", "approved")
+      .in("conference_room_id", roomIds);
+
+    if (meetingError) return null;
+
+    for (let roomId of roomIds) {
+      const overlapping = meetings.some(
+        (m) =>
+          m.conference_room_id === roomId &&
+          !(
+            new Date(m.start_time).getTime() + m.duration_minutes * 60000 <=
+              newStartTime.getTime() ||
+            new Date(m.start_time).getTime() >= endTime.getTime()
+          )
+      );
+      if (!overlapping) return roomId;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("ERROR in getAvailableRoom:", error);
+    return null;
+  }
+}
+
+const addMeeting = async (req, res) => {
+  const userId = req.user.userId;
+  const officeId = req.user.officeId;
+
+  const {
+    title,
+    description,
+    start_time,
+    duration_minutes,
+    want_room,
+    participants,
+  } = req.body;
+  const newStartTime = new Date(start_time);
+  const endTime = new Date(newStartTime.getTime() + duration_minutes * 60000);
+
+  // 1️⃣ Get an available license
+  const licenseId = await getAvailableLicense(officeId, newStartTime, endTime);
+  if (!licenseId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "❌ No Webex license available." });
+  }
+
+  // 2️⃣ Get an available room (if requested)
+  let roomId = null;
+  if (want_room) {
+    roomId = await getAvailableRoom(officeId, newStartTime, endTime);
+    if (!roomId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "❌ No conference room available." });
+    }
+  }
+
+  // 3️⃣ Insert meeting as APPROVED
+  const { data: insertedMeeting, error: insertError } = await supabase
+    .from("meetings")
+    .insert([
+      {
+        title,
+        description,
+        start_time,
+        duration_minutes,
+        requested_by: userId,
+        status: "approved",
+        conference_room_id: roomId,
+        license: licenseId,
+        link: "GENERATED_LINK_HERE", // generate if needed
+        want_room,
+      },
+    ])
+    .select()
+    .single();
+
+  if (insertError) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to insert meeting." });
+  }
+
+  // 4️⃣ Add participants
+  if (Array.isArray(participants) && participants.length > 0) {
+    const participantRows = participants
+      .map((id) => Number(id))
+      .filter((id) => !isNaN(id))
+      .map((user_id) => ({ meeting_id: insertedMeeting.id, user_id }));
+
+    const { error: participantError } = await supabase
+      .from("meeting_participants")
+      .insert(participantRows);
+
+    if (participantError) {
+      console.error("Error inserting participants:", participantError);
+      return res.status(500).json({
+        success: false,
+        message: "Meeting saved but failed to assign participants",
+      });
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "✅ Meeting scheduled and approved.",
+    meeting: insertedMeeting,
   });
 };
 module.exports = {

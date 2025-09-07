@@ -9,13 +9,15 @@ const getAllUsersOfOffice = async (req, res) => {
       .eq("office", officeId);
 
     if (error) {
-      return res.status.json({
+      return res.status(400).json({
         success: false,
         message: "ERROR in fetching Users",
       });
     }
 
-    return res.status(200).json({ success: true, users: data });
+    console.log(data);
+
+    return res.status(200).json({ data });
   } catch (err) {
     console.error("User fetching error: ", err);
     return res
