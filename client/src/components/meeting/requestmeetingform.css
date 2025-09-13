@@ -55,14 +55,14 @@
 
 /* Form title */
 .form-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: var(--text-color);
   margin-bottom: 2rem;
   font-weight: 800;
   text-align: center;
   flex-shrink: 0;
   letter-spacing: -0.025em;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  background: linear-gradient(135deg, var(--primary-color ), var(--primary-dark));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -517,4 +517,58 @@ select:disabled {
 
 .form-wrapper.extra-wide {
   max-width: 1000px;
+}
+
+/* Use the same style base as .custom-checkbox-label for participants-list */
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--lighter-gray), #f0f9ff);
+  border: 2px solid var(--light-gray);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-color);
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.04);
+}
+
+.participants-label {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Button style matches your custom checkbox button */
+.add-participant-btn {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: var(--white);
+  border: none;
+  border-radius: 16px;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+
+.add-participant-btn:hover {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+  transform: translateY(-2px);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .participants-list {
+    padding: 0.7rem 0.7rem;
+    font-size: 0.95rem;
+  }
+  .add-participant-btn {
+    padding: 0.6rem 1.1rem;
+    font-size: 0.95rem;
+  }
 }

@@ -3,6 +3,7 @@ import { Outlet, NavLink } from "react-router-dom";
 import Header from "../components/shared/Header";
 import Footer from "../components/shared/Footer";
 import ScheduledMeetings from "../components/scheduled/ScheduledMeetings";
+import PreviousMeeting from "../components/meeting/PreviousMeeting"; // import the component
 import "../styles/dashboard.css";
 
 export default function Dashboard() {
@@ -28,6 +29,14 @@ export default function Dashboard() {
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
                   Request Meeting
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/dashboard/previous"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                >
+                  Previous Meetings
                 </NavLink>
               </li>
             </ul>

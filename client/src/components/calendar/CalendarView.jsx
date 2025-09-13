@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import MeetingService from "../../services/eventService";
-import "../calendar/calendarview.css";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import FullCalendar from '@fullcalendar/react';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import MeetingService from '../../services/eventService';
+import '../calendar/calendarview.css'
 
 export default function CalendarView() {
   const [meetings, setMeetings] = useState([]);
@@ -13,37 +12,14 @@ export default function CalendarView() {
 
   // Fetch meetings from API
   const fetchMeetings = async () => {
-    const token = localStorage.getItem("token");
     try {
       setLoading(true);
-      const meetingsData = await axios.get(
-        "http://localhost:3000/meeting/approved_meetings",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log(meetingsData);
-
-      const formatted = meetingsData.data.map((m) => {
-        // ✅ Normalize start_time
-        const safeStart = new Date(
-          m.start.includes("T") ? m.start : m.start.replace(" ", "T") + "Z"
-        );
-
-        const safeEnd = new Date(
-          m.end.includes("T") ? m.end : m.end.replace(" ", "T") + "Z"
-        );
-
-        return {
-          ...m,
-          start: safeStart.toISOString(),
-          end: safeEnd.toISOString(),
-        };
-      });
-
-      setMeetings(formatted);
+      const meetingsData = await MeetingService.getAllMeetings();
+      setMeetings(meetingsData);
       setError(null);
     } catch (err) {
-      console.error("Failed to fetch meetings:", err);
-      setError("Failed to load meetings. Please try again.");
+      console.error('Failed to fetch meetings:', err);
+      setError('Failed to load meetings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,16 +36,17 @@ export default function CalendarView() {
 
     setSelectedMeeting({
       title: meeting.title,
-      description: props.description || "No description",
+      description: props.description || 'No description',
       start: meeting.start.toLocaleString(),
       end: meeting.end.toLocaleString(),
-      status: props.status || "pending",
+      status: props.status || 'pending',
       duration: props.duration_minutes || 60,
-      room: props.conference_room_name || "No room assigned",
-      requestedBy: props.requested_by_name || "Unknown",
+      room: props.conference_room_name || 'No room assigned',
+      requestedBy: props.requested_by_name || 'Unknown',
       link: props.link || null,
     });
   };
+
 
   if (loading) {
     return <div className="calendar-loading">Loading meetings...</div>;
@@ -109,22 +86,22 @@ export default function CalendarView() {
         eventDidMount={(info) => {
           const desc = info.event.extendedProps.description;
           if (desc) {
-            info.el.setAttribute("title", desc);
+            info.el.setAttribute('title', desc);
           }
         }}
         headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "timeGridWeek,timeGridDay",
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridWeek,timeGridDay'
         }}
         slotDuration="00:30:00"
         slotLabelInterval="01:00:00"
-        eventOverlap={true}
-        slotEventOverlap={true}
+        eventOverlap={false}
+        slotEventOverlap={false}
         businessHours={{
           daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
-          startTime: "09:00",
-          endTime: "17:00",
+          startTime: '09:00',
+          endTime: '17:00'
         }}
       />
       {selectedMeeting && (
@@ -132,42 +109,21 @@ export default function CalendarView() {
           className="meeting-modal-overlay"
           onClick={() => setSelectedMeeting(null)}
         >
-          <div className="meeting-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="close-button"
-              onClick={() => setSelectedMeeting(null)}
-            >
-              ×
-            </button>
+          <div
+            className="meeting-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="close-button" onClick={() => setSelectedMeeting(null)}>×</button>
             <h2>{selectedMeeting.title}</h2>
-            <p>
-              <strong>Description:</strong> {selectedMeeting.description}
-            </p>
-            <p>
-              <strong>Start:</strong> {selectedMeeting.start}
-            </p>
-            <p>
-              <strong>End:</strong> {selectedMeeting.end}
-            </p>
-            <p>
-              <strong>Status:</strong> {selectedMeeting.status}
-            </p>
-            <p>
-              <strong>Duration:</strong> {selectedMeeting.duration} minutes
-            </p>
-            <p>
-              <strong>Room:</strong> {selectedMeeting.room}
-            </p>
-            <p>
-              <strong>Requested by:</strong> {selectedMeeting.requestedBy}
-            </p>
+            <p><strong>Description:</strong> {selectedMeeting.description}</p>
+            <p><strong>Start:</strong> {selectedMeeting.start}</p>
+            <p><strong>End:</strong> {selectedMeeting.end}</p>
+            <p><strong>Status:</strong> {selectedMeeting.status}</p>
+            <p><strong>Duration:</strong> {selectedMeeting.duration} minutes</p>
+            <p><strong>Room:</strong> {selectedMeeting.room}</p>
+            <p><strong>Requested by:</strong> {selectedMeeting.requestedBy}</p>
             {selectedMeeting.link && (
-              <p>
-                <strong>Link:</strong>{" "}
-                <a href={selectedMeeting.link} target="_blank" rel="noreferrer">
-                  {selectedMeeting.link}
-                </a>
-              </p>
+              <p><strong>Link:</strong> <a href={selectedMeeting.link} target="_blank" rel="noreferrer">{selectedMeeting.link}</a></p>
             )}
           </div>
         </div>
