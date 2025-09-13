@@ -22,25 +22,66 @@ function tab1() {
   const [fetchError, setFetchError] = useState(false);
   const [fetchMeetings, setfetchMeetings] = useState(null);
   const [showPending, setShowPending] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [availableLicenses, setAvailableLicenses] = useState([]);
+
+  //check Availabilty
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!selectedMeeting) return;
+      const token = localStorage.getItem("token");
+
+      const [roomsRes, licensesRes] = await Promise.all([
+        axios.get(
+          `http://localhost:3000/admin/available-rooms?meeting_id=${selectedMeeting.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        ),
+        axios.get(
+          `http://localhost:3000/admin/available-licenses?meeting_id=${selectedMeeting.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        ),
+      ]);
+
+      setAvailableRooms(roomsRes.data);
+      setAvailableLicenses(licensesRes.data.licenses);
+    };
+
+    fetchAvailability();
+  }, [selectedMeeting]);
 
   // ✅ Needed for navigation
 
   const handleApprove = async () => {
-    if (!selectedMeeting) {
-      console.error("No meeting selected");
-      return;
-    }
+    if (!selectedMeeting) return;
 
     try {
-      // await axios.post(`${URL}/api/meetings/approve`, {
-      //  id: selectedMeeting.id });
-      // const updatedMeeting = { ...selectedMeeting, status: 'APPROVED', approvedAt: new Date() };
-      // setMeetings(meetings.filter(m => m.id !== selectedMeeting.id));
-      // setApprovedMeetings([...approvedMeetings, updatedMeeting]);
-      // setSelectedMeeting(null);
-      const { data, err } = await supabase.from("meetings").insert([{}]);
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        "http://localhost:3000/admin/approve-meeting",
+        { meeting_id: selectedMeeting.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log("✅ Approved:", res.data);
+
+      // Refresh pending meetings
+      setfetchMeetings(
+        fetchMeetings.filter((m) => m.id !== selectedMeeting.id)
+      );
+      setSelectedMeeting(null);
+
+      alert(
+        `Meeting approved!\nLicense: ${res.data.assignedLicense}\nRoom: ${
+          res.data.assignedRoom || "Not required"
+        }`
+      );
     } catch (err) {
       console.error("Error approving meeting:", err);
+      alert(err.response?.data?.message || "Approval failed");
     }
   };
 
@@ -118,7 +159,10 @@ function tab1() {
       <div className="right-panel-meeting">
         <div>
           <h3>MEETING DETAILS</h3>
-          <button className="clear-btn" onClick={() => selectedMeeting(null)}>
+          <button
+            className="clear-btn"
+            onClick={() => setSelectedMeeting(null)}
+          >
             CLEAR
           </button>
           {selectedMeeting ? (
@@ -141,7 +185,7 @@ function tab1() {
               <p>
                 <strong>Status:</strong> {selectedMeeting.status}
               </p>
-              {selectedMeeting.status === "pending" && (
+              {selectedMeeting.status && (
                 <>
                   <button className="approve-btn" onClick={handleApprove}>
                     APPROVE
@@ -168,40 +212,48 @@ function tab1() {
               </tr>
             </thead>
             <tbody>
-              {/* {meetings.length === 0 ? (
-                <tr><td colSpan="5">No meetings yet</td></tr>
-              ) : (
-                meetings.map((m) => (
-                  <tr key={m.id} onClick={() => setSelectedMeeting(m)}>
-                    <td>{m.id}</td>
-                    <td>{m.meeting_title}</td>
-                    <td>{m.participants}</td>
-                    <td>{m.date} & {m.time}</td>
-                    <td>
-                      <span className={`status ${m.status?.toLowerCase()}`}>{m.status}</span>
-                    </td>
-                  </tr>
-                ))
-              )} */}
               {fetchError && <p>{fetchError}</p>}
 
               {fetchMeetings === null ? null : fetchMeetings.length === 0 ? (
                 <tr>
-                  <td colSpan="5">No meetings yet</td>
+                  <td colSpan="6">No meetings yet</td>
                 </tr>
               ) : (
                 fetchMeetings.map((f) => (
-                  <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
+                  <tr
+                    key={f.id}
+                    onClick={() => setSelectedMeeting(f)}
+                    className={
+                      f.hasAvailableLicense ? "available" : "unavailable"
+                    }
+                  >
                     <td>{f.id}</td>
                     <td>{f.title}</td>
                     <td>{f.want_room ? "Yes" : "No"}</td>
-                    <td>
-                      {f.date} {f.start_time}
+                    <td>{f.start_time}</td>
+                    <td>{f.status}</td>
+                    <td
+                      style={{
+                        color: f.hasAvailableLicense ? "green" : "red",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {f.licenseInfo}
                     </td>
                     <td>
-                      <span className={`status ${f.status?.toLowerCase()}`}>
-                        {f.status}
-                      </span>
+                      {f.want_room ? (
+                        availableRooms.length > 0 ? (
+                          <span style={{ color: "green", fontWeight: "bold" }}>
+                            {availableRooms.length} available
+                          </span>
+                        ) : (
+                          <span style={{ color: "red", fontWeight: "bold" }}>
+                            No rooms
+                          </span>
+                        )
+                      ) : (
+                        "Not required"
+                      )}
                     </td>
                   </tr>
                 ))

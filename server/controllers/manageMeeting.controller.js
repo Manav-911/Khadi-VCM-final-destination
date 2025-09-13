@@ -17,17 +17,59 @@ const getPendingRequests = async (req, res) => {
         id,
         name,
         office
-      )
+      ),
+      status,
+      description
     `
     )
     .eq("status", "pending");
 
   if (error) return res.status(500).json({ error });
 
-  // Filter based on user's office
+  console.log(data);
+
   const filtered = data.filter((m) => m.requested_by.office === officeId);
 
-  res.json(filtered);
+  // Enrich with availability
+  const enriched = await Promise.all(
+    filtered.map(async (meeting) => {
+      // call your getAvailableLicenses logic
+      const { data: licenses } = await supabase
+        .from("licenses")
+        .select("id")
+        .eq("office_id", officeId);
+
+      const { data: approvedMeetings } = await supabase
+        .from("meetings")
+        .select("license, start_time, duration_minutes")
+        .eq("status", "approved");
+
+      const totalLicenses = licenses.length;
+      let busyLicenses = new Set();
+      if (approvedMeetings) {
+        approvedMeetings.forEach((m) => {
+          const s = new Date(m.start_time);
+          const e = new Date(s.getTime() + m.duration_minutes * 60000);
+          const start = new Date(meeting.start_time);
+          const end = new Date(
+            start.getTime() + meeting.duration_minutes * 60000
+          );
+
+          if (!(e <= start || s >= end)) busyLicenses.add(m.license);
+        });
+      }
+
+      const availableLicenses = totalLicenses - busyLicenses.size;
+
+      return {
+        ...meeting,
+        licenseInfo: `${availableLicenses}/${totalLicenses}`,
+        hasAvailableLicense: availableLicenses > 0,
+      };
+    })
+  );
+
+  res.json(enriched);
 };
 
 const getCancelledMeetings = async (req, res) => {
@@ -130,12 +172,80 @@ const getAvailableRooms = async (req, res) => {
   res.json(available);
 };
 
-const approveMeeting = async (req, res) => {
-  const { meeting_id, room_id } = req.body;
+const getAvailableLicenses = async (req, res) => {
+  const { meeting_id } = req.query;
 
+  // 1. Get meeting details
+  const { data: meeting, error: meetingErr } = await supabase
+    .from("meetings")
+    .select("start_time, duration_minutes, requested_by ( office )")
+    .eq("id", meeting_id)
+    .single();
+
+  if (meetingErr || !meeting) {
+    return res.status(400).json({ error: "Invalid meeting ID" });
+  }
+
+  const officeId = meeting.requested_by.office;
+  const newStartTime = new Date(meeting.start_time);
+  const endTime = new Date(
+    newStartTime.getTime() + meeting.duration_minutes * 60000
+  );
+
+  // 2. Get all licenses for this office
+  const { data: licenses, error: licenseErr } = await supabase
+    .from("licenses")
+    .select("id, office_id, account")
+    .eq("office_id", officeId);
+
+  if (licenseErr) {
+    return res.status(500).json({ error: "Failed to fetch licenses" });
+  }
+
+  if (!licenses || licenses.length === 0) {
+    return res.json([]); // no licenses at all
+  }
+
+  const licenseIds = licenses.map((l) => l.id);
+
+  // 3. Get approved meetings that are already using these licenses
+  const { data: meetings, error: meetingConflictErr } = await supabase
+    .from("meetings")
+    .select("license, start_time, duration_minutes")
+    .eq("status", "approved")
+    .in("license", licenseIds);
+
+  if (meetingConflictErr) {
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch meetings using licenses" });
+  }
+
+  // 4. Check which licenses are busy
+  const busyLicenseIds = new Set();
+
+  meetings.forEach((m) => {
+    const mStart = new Date(m.start_time);
+    const mEnd = new Date(mStart.getTime() + m.duration_minutes * 60000);
+
+    const overlap = !(mEnd <= newStartTime || mStart >= endTime);
+    if (overlap) busyLicenseIds.add(m.license);
+  });
+
+  // 5. Return available licenses
+  const available = licenses.filter((l) => !busyLicenseIds.has(l.id));
+  res.status(200).json({ licenses: available });
+};
+
+const approveMeeting = async (req, res) => {
+  const { meeting_id } = req.body;
+
+  // 1. Get meeting
   const { data: meeting, error } = await supabase
     .from("meetings")
-    .select("*")
+    .select(
+      "id, start_time, duration_minutes, want_room, requested_by ( office )"
+    )
     .eq("id", meeting_id)
     .single();
 
@@ -143,37 +253,77 @@ const approveMeeting = async (req, res) => {
     return res.status(404).json({ message: "Meeting not found" });
   }
 
+  const officeId = meeting.requested_by.office;
   const start = new Date(meeting.start_time);
   const end = new Date(start.getTime() + meeting.duration_minutes * 60000);
 
-  // Check which licenses are busy during this time
-  const { data: all } = await supabase
+  // 2. Find all licenses for this office
+  const { data: licenses } = await supabase
+    .from("licenses")
+    .select("id")
+    .eq("office_id", officeId);
+
+  if (!licenses || licenses.length === 0) {
+    return res
+      .status(400)
+      .json({ message: "No licenses available for this office" });
+  }
+
+  const licenseIds = licenses.map((l) => l.id);
+
+  // 3. Check which licenses are already busy
+  const { data: licenseMeetings } = await supabase
     .from("meetings")
     .select("license, start_time, duration_minutes")
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .in("license", licenseIds);
 
   const busyLicenses = new Set();
-  all.forEach((m) => {
+  licenseMeetings.forEach((m) => {
     const s = new Date(m.start_time);
     const e = new Date(s.getTime() + m.duration_minutes * 60000);
     if (!(e <= start || s >= end)) busyLicenses.add(m.license);
   });
 
-  let assignedLicense = 1;
-  if (busyLicenses.has(1)) {
-    if (busyLicenses.has(2)) {
-      return res.status(400).json({ message: "No license available" });
-    } else {
-      assignedLicense = 2;
+  const availableLicense = licenses.find((l) => !busyLicenses.has(l.id));
+  if (!availableLicense) {
+    return res
+      .status(400)
+      .json({ message: "No license available at this time" });
+  }
+
+  // 4. If room is needed, find one
+  let assignedRoom = null;
+  if (meeting.want_room) {
+    const { data: rooms } = await supabase
+      .from("conference_room")
+      .select("id")
+      .eq("office_id", officeId);
+
+    const roomIds = rooms.map((r) => r.id);
+
+    const { data: roomMeetings } = await supabase
+      .from("meetings")
+      .select("conference_room_id, start_time, duration_minutes")
+      .eq("status", "approved")
+      .in("conference_room_id", roomIds);
+
+    const busyRooms = new Set();
+    roomMeetings.forEach((m) => {
+      const s = new Date(m.start_time);
+      const e = new Date(s.getTime() + m.duration_minutes * 60000);
+      if (!(e <= start || s >= end)) busyRooms.add(m.conference_room_id);
+    });
+
+    assignedRoom = rooms.find((r) => !busyRooms.has(r.id));
+    if (!assignedRoom) {
+      return res
+        .status(400)
+        .json({ message: "No room available at this time" });
     }
   }
 
-  if (meeting.want_room && !room_id) {
-    return res
-      .status(400)
-      .json({ message: "Room is required for this meeting" });
-  }
-
+  // 5. Approve and update meeting
   const meeting_link = `https://webex.com/meet/${Math.random()
     .toString(36)
     .substring(2, 10)}`;
@@ -181,8 +331,8 @@ const approveMeeting = async (req, res) => {
   const { error: updateError } = await supabase
     .from("meetings")
     .update({
-      license: assignedLicense,
-      conference_room_id: meeting.want_room ? room_id : null,
+      license: availableLicense.id,
+      conference_room_id: assignedRoom ? assignedRoom.id : null,
       status: "approved",
       link: meeting_link,
     })
@@ -191,7 +341,13 @@ const approveMeeting = async (req, res) => {
   if (updateError)
     return res.status(500).json({ message: "Failed to approve" });
 
-  res.json({ success: true, message: "Meeting approved" });
+  res.json({
+    success: true,
+    message: "Meeting approved",
+    assignedLicense: availableLicense.id,
+    assignedRoom: assignedRoom ? assignedRoom.id : null,
+    link: meeting_link,
+  });
 };
 
 const rejectMeeting = async (req, res) => {
@@ -258,7 +414,11 @@ async function checkLicense(officeId, newStartTime, endTime) {
             new Date(m.start_time).getTime() >= endTime.getTime()
           )
       );
-      if (!overlapping) return license;
+      if (!overlapping) {
+        console.log(license);
+
+        return license;
+      }
     }
 
     return null; // no free license
@@ -324,7 +484,7 @@ const addMeeting = async (req, res) => {
   const endTime = new Date(newStartTime.getTime() + duration_minutes * 60000);
 
   // 1️⃣ Get an available license
-  const licenseId = await getAvailableLicense(officeId, newStartTime, endTime);
+  const licenseId = await checkLicense(officeId, newStartTime, endTime);
   if (!licenseId) {
     return res
       .status(400)
@@ -334,7 +494,7 @@ const addMeeting = async (req, res) => {
   // 2️⃣ Get an available room (if requested)
   let roomId = null;
   if (want_room) {
-    roomId = await getAvailableRoom(officeId, newStartTime, endTime);
+    roomId = await checkRoom(officeId, newStartTime, endTime);
     if (!roomId) {
       return res
         .status(400)
@@ -401,4 +561,6 @@ module.exports = {
   rejectMeeting,
   getApprovedMeeting,
   getCancelledMeetings,
+  addMeeting,
+  getAvailableLicenses,
 };

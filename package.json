@@ -7,7 +7,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev:server": "cd new_server && npm run dev",
+    "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "dev:admin": "cd new_admin_frontend && npm run dev",
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:admin\""
