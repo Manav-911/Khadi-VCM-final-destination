@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./participantselector.css";
 
-export default function ParticipantSelector({ show, onClose, onSelect, selected }) {
+export default function ParticipantSelector({
+  show,
+  onClose,
+  onSelect,
+  selected,
+}) {
   const [search, setSearch] = useState("");
   const [participants, setParticipants] = useState([]);
   const [offices, setOffices] = useState([]);
@@ -12,14 +17,29 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
 
   // Fetch participants and offices from API
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (show) {
       setLoading(true);
       Promise.all([
-        axios.get("http://localhost:5000/api/participants"),
-        axios.get("http://localhost:5000/api/offices"),
+        axios.get("http://localhost:3000/meeting/getUsers", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:3000/meeting/getOffices", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ])
         .then(([partRes, offRes]) => {
-          setParticipants(partRes.data || []);
+          const officesMap = {};
+          offRes.data.forEach((office) => {
+            officesMap[office.id] = office.name;
+          });
+
+          const participantsWithOffice = partRes.data.map((p) => ({
+            ...p,
+            officeName: officesMap[p.office] || "Unknown Office",
+          }));
+
+          setParticipants(participantsWithOffice);
           setOffices(offRes.data || []);
         })
         .catch(() => {
@@ -42,7 +62,7 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
   const filteredParticipants = participants.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.office && p.office.name && p.office.name.toLowerCase().includes(search.toLowerCase()))
+      p.officeName.toLowerCase().includes(search.toLowerCase())
   );
 
   // Filter offices
@@ -63,17 +83,21 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
     if (!office) return;
 
     const officeParticipants = participants
-      .filter((p) => p.office && p.office.name === officeName)
+      .filter((p) => p.officeName === officeName) // ✅ compare by officeName
       .map((p) => p.id);
 
     if (selectedOffices.includes(officeName)) {
       // Deselect
       setSelectedOffices((prev) => prev.filter((n) => n !== officeName));
-      setSelectedIndividuals((prev) => prev.filter((id) => !officeParticipants.includes(id)));
+      setSelectedIndividuals((prev) =>
+        prev.filter((id) => !officeParticipants.includes(id))
+      );
     } else {
       // Select
       setSelectedOffices((prev) => [...prev, officeName]);
-      setSelectedIndividuals((prev) => [...new Set([...prev, ...officeParticipants])]);
+      setSelectedIndividuals((prev) => [
+        ...new Set([...prev, ...officeParticipants]),
+      ]);
     }
   };
 
@@ -133,7 +157,9 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
                 filteredParticipants.map((p) => (
                   <label
                     className={`ps-row${
-                      selectedIndividuals.includes(p.id) ? " ps-row-selected" : ""
+                      selectedIndividuals.includes(p.id)
+                        ? " ps-row-selected"
+                        : ""
                     }`}
                     key={p.id}
                   >
@@ -143,7 +169,7 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
                       onChange={() => toggleIndividual(p.id)}
                     />
                     <span className="ps-row-name">
-                      {p.name} {p.office ? `(${p.office.name})` : ""}
+                      {p.name} ({p.officeName})
                     </span>
                   </label>
                 ))
@@ -181,25 +207,33 @@ export default function ParticipantSelector({ show, onClose, onSelect, selected 
         <div className="ps-selected-summary">
           <div>
             <span className="ps-summary-label">Selected Individuals:</span>{" "}
-            {selectedIndividuals.length > 0
-              ? participants
-                  .filter((p) => selectedIndividuals.includes(p.id))
-                  .map((p) => p.name)
-                  .join(", ")
-              : <span className="ps-summary-na">N/A</span>}
+            {selectedIndividuals.length > 0 ? (
+              participants
+                .filter((p) => selectedIndividuals.includes(p.id))
+                .map((p) => p.name)
+                .join(", ")
+            ) : (
+              <span className="ps-summary-na">N/A</span>
+            )}
           </div>
           <div>
             <span className="ps-summary-label">Selected Offices:</span>{" "}
-            {selectedOffices.length > 0
-              ? selectedOffices.join(", ")
-              : <span className="ps-summary-na">N/A</span>}
+            {selectedOffices.length > 0 ? (
+              selectedOffices.join(", ")
+            ) : (
+              <span className="ps-summary-na">N/A</span>
+            )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="ps-actions">
-          <button className="ps-btn" onClick={handleDone}>Done</button>
-          <button className="ps-btn ps-btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="ps-btn" onClick={handleDone}>
+            Done
+          </button>
+          <button className="ps-btn ps-btn-cancel" onClick={onClose}>
+            Cancel
+          </button>
         </div>
       </div>
     </div>

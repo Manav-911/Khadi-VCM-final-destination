@@ -4,6 +4,7 @@ const {
   getApprovedMeetingUser,
   getOffices,
   getUsersByOffice,
+  getUsers,
 } = require("../controllers/meeting.controller");
 const { authenticateToken } = require("../middleware/authMiddleware.js");
 const supabase = require("../config/db.js");
@@ -22,5 +23,6 @@ meetingRouter.get(
   authenticateToken,
   getUsersByOffice
 );
+meetingRouter.get("/getUsers", authenticateToken, getUsers);
 
 module.exports = meetingRouter;

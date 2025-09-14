@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import axios from 'axios';
+import axios from "axios";
 import { useMeetingContext } from "../../context/MeetingContext";
 import ParticipantSelector from "./ParticipantSelector";
 import "../meeting/requestmeetingform.css";
@@ -17,7 +17,7 @@ export default function RequestMeetingForm() {
     durationMinutes: "",
     wantsConferenceRoom: false,
     description: "",
-    participants: { individuals: [], offices: [] }
+    participants: { individuals: [], offices: [] },
   });
 
   const [showSelector, setShowSelector] = useState(false);
@@ -36,7 +36,8 @@ export default function RequestMeetingForm() {
       const durationHrs = parseInt(formData.durationHours);
       const durationMins = parseInt(formData.durationMinutes);
 
-      let totalMinutes = (hours % 12) * 60 + minutes + durationHrs * 60 + durationMins;
+      let totalMinutes =
+        (hours % 12) * 60 + minutes + durationHrs * 60 + durationMins;
       if (formData.amPm === "PM") totalMinutes += 12 * 60;
 
       const endHours24 = Math.floor(totalMinutes / 60) % 24;
@@ -53,7 +54,7 @@ export default function RequestMeetingForm() {
     formData.startMinute,
     formData.durationHours,
     formData.durationMinutes,
-    formData.amPm
+    formData.amPm,
   ]);
 
   const pad = (n) => n.toString().padStart(2, "0");
@@ -93,11 +94,18 @@ export default function RequestMeetingForm() {
         parseInt(formData.durationMinutes || 0),
       want_room: formData.wantsConferenceRoom,
       status: "pending",
-      participants: formData.participants
+      participants: formData.participants,
     };
 
     try {
-      await axios.post("http://localhost:5000/api/meetings", payload);
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:3000/meeting/requestMeeting",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       alert("Meeting request submitted!");
       triggerRefresh();
     } catch (err) {
@@ -117,7 +125,9 @@ export default function RequestMeetingForm() {
               type="text"
               placeholder="e.g. Design Review"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               required
             />
           </div>
@@ -142,7 +152,9 @@ export default function RequestMeetingForm() {
                 min="1"
                 max="12"
                 value={formData.startHour}
-                onChange={(e) => setFormData({ ...formData, startHour: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, startHour: e.target.value })
+                }
                 required
               />
               <span>:</span>
@@ -152,13 +164,17 @@ export default function RequestMeetingForm() {
                 min="0"
                 max="59"
                 value={formData.startMinute}
-                onChange={(e) => setFormData({ ...formData, startMinute: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, startMinute: e.target.value })
+                }
                 required
               />
               <select
                 className="ampm-select"
                 value={formData.amPm}
-                onChange={(e) => setFormData({ ...formData, amPm: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, amPm: e.target.value })
+                }
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -174,7 +190,9 @@ export default function RequestMeetingForm() {
                 placeholder="Hrs"
                 min="0"
                 value={formData.durationHours}
-                onChange={(e) => setFormData({ ...formData, durationHours: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, durationHours: e.target.value })
+                }
                 required
               />
               <span>:</span>
@@ -184,7 +202,9 @@ export default function RequestMeetingForm() {
                 min="0"
                 max="59"
                 value={formData.durationMinutes}
-                onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, durationMinutes: e.target.value })
+                }
                 required
               />
               {endTime && (
@@ -204,15 +224,26 @@ export default function RequestMeetingForm() {
                   className="hidden-checkbox"
                   checked={formData.wantsConferenceRoom}
                   onChange={(e) =>
-                    setFormData({ ...formData, wantsConferenceRoom: e.target.checked })
+                    setFormData({
+                      ...formData,
+                      wantsConferenceRoom: e.target.checked,
+                    })
                   }
                 />
                 <div className="custom-checkbox">
-                  <svg className="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg
+                    className="checkmark"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
                     <polyline points="20,6 9,17 4,12"></polyline>
                   </svg>
                 </div>
-                <span className="checkbox-text">Yes, I need a conference room</span>
+                <span className="checkbox-text">
+                  Yes, I need a conference room
+                </span>
               </label>
             </div>
           </div>
@@ -222,7 +253,9 @@ export default function RequestMeetingForm() {
             <textarea
               placeholder="Add meeting agenda, notes, etc."
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows="3"
               required
             />
@@ -259,7 +292,7 @@ export default function RequestMeetingForm() {
         onSelect={(selected) =>
           setFormData((prev) => ({
             ...prev,
-            participants: selected
+            participants: selected,
           }))
         }
         selected={formData.participants}

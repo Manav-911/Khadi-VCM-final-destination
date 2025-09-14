@@ -1,4 +1,5 @@
 const supabase = require("../config/db.js");
+const { get } = require("../routes/auth.Router.js");
 
 async function checkLicense(officeId, newStartTime, endTime) {
   try {
@@ -347,6 +348,19 @@ const getUsersByOffice = async (req, res) => {
   }
 };
 
+const getUsers = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from("users").select("*");
+
+    if (error) throw error;
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error fetching users:", err.message);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
 module.exports = {
   addMeeting,
   checkLicense,
@@ -354,4 +368,5 @@ module.exports = {
   getApprovedMeetingUser,
   getOffices,
   getUsersByOffice,
+  getUsers,
 };

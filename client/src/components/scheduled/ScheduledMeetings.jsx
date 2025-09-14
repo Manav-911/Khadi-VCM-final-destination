@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import MeetingService from "../../services/eventService";
-import '../scheduled/scheduledmeetings.css';
+import "../scheduled/scheduledmeetings.css";
 import { useMeetingContext } from "../../context/MeetingContext"; // ✅ Import context
+import axios from "axios";
 
 export default function ScheduledMeetings() {
   const [meetings, setMeetings] = useState([]);
@@ -12,13 +13,25 @@ export default function ScheduledMeetings() {
     async function fetchMeetings() {
       try {
         setLoading(true);
-        const res = await MeetingService.getAllMeetings();
+        const res = await axios.get(
+          "http://localhost:3000/meeting/approved_meetings",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            withCredentials: true,
+          }
+        );
+
+        // Access the actual data
+        const meetingsData = res.data;
+
         const now = new Date();
 
-        const upcoming = res
-          .filter(meeting => new Date(meeting.start) > now)
+        const upcoming = meetingsData
+          .filter((meeting) => new Date(meeting.start) > now)
           .sort((a, b) => new Date(a.start) - new Date(b.start));
-        
+
         setMeetings(upcoming);
       } catch (err) {
         console.error("Error fetching meetings:", err);
@@ -31,10 +44,10 @@ export default function ScheduledMeetings() {
   }, [refreshFlag]); // ✅ Re-run when refreshFlag changes
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString([], { 
-      hour: "2-digit", 
-      minute: "2-digit", 
-      hour12: true 
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -48,10 +61,10 @@ export default function ScheduledMeetings() {
     } else if (date.toDateString() === tomorrow.toDateString()) {
       return "Tomorrow";
     } else {
-      return date.toLocaleDateString([], { 
-        weekday: 'short',
-        month: 'short', 
-        day: 'numeric' 
+      return date.toLocaleDateString([], {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
       });
     }
   };
@@ -72,7 +85,7 @@ export default function ScheduledMeetings() {
         <p className="no-meetings">No upcoming meetings scheduled</p>
       ) : (
         <div className="meetingHolder">
-          {meetings.map(meeting => {
+          {meetings.map((meeting) => {
             const start = new Date(meeting.start);
             const end = new Date(meeting.end);
 
@@ -82,11 +95,11 @@ export default function ScheduledMeetings() {
                   <strong className="meeting-title">{meeting.title}</strong>
                   <span className="meeting-date">{formatDate(start)}</span>
                 </div>
-                
+
                 <div className="meeting-time">
                   {formatTime(start)} – {formatTime(end)}
                 </div>
-                
+
                 <div className="meeting-location">
                   📍 {meeting.conference_room?.name || "TBD"}
                 </div>

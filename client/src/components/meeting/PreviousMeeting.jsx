@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MeetingService from "../../services/eventService";
 import "./PreviousMeeting.css";
+import axios from "axios";
 
 export default function PreviousMeeting() {
   const [meetings, setMeetings] = useState([]);
@@ -12,12 +13,21 @@ export default function PreviousMeeting() {
   const fetchMeetings = async () => {
     try {
       setLoading(true);
-      const meetingsData = await MeetingService.getMeetingsForUser();
+      const meetingsData = await axios.get(
+        "http://localhost:3000/meeting/approved_meetings",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          withCredentials: true,
+        }
+      );
       console.log("Fetched meetings:", meetingsData);
+      const data = meetingsData.data;
 
       // Filter only concluded meetings (end date in the past)
       const now = new Date();
-      const concludedMeetings = meetingsData.filter(
+      const concludedMeetings = data.filter(
         (m) => m.end && new Date(m.end) <= now
       );
 
@@ -41,8 +51,7 @@ export default function PreviousMeeting() {
       search === "" || m.title?.toLowerCase().includes(search.toLowerCase());
 
     const dateMatch =
-      !selectedDate ||
-      (m.start && m.start.split("T")[0] === selectedDate);
+      !selectedDate || (m.start && m.start.split("T")[0] === selectedDate);
 
     return titleMatch && dateMatch;
   });
