@@ -32,6 +32,12 @@ export default function CalendarView() {
     }
   };
 
+  const formatStr = (str) =>
+    new Date(str).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+
   useEffect(() => {
     fetchMeetings();
   }, []);
@@ -40,12 +46,14 @@ export default function CalendarView() {
   const handleEventClick = (clickInfo) => {
     const meeting = clickInfo.event;
     const props = meeting.extendedProps;
+    console.log(meeting);
 
+    console.log(meetings);
     setSelectedMeeting({
       title: meeting.title,
       description: props.description || "No description",
-      start: meeting.start.toLocaleString(),
-      end: meeting.end.toLocaleString(),
+      start: formatStr(meeting.startStr),
+      end: formatStr(meeting.endStr),
       status: props.status || "pending",
       duration: props.duration_minutes || 60,
       room: props.conference_room_name || "No room assigned",
@@ -84,6 +92,7 @@ export default function CalendarView() {
         height="auto"
         slotMinTime="00:00:00"
         slotMaxTime="24:00:00"
+        timeZone="IST"
         allDaySlot={false}
         nowIndicator={true}
         editable={false}

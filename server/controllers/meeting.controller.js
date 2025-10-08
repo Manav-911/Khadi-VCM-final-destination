@@ -1,18 +1,15 @@
 const supabase = require("../config/db.js");
 const { get } = require("../routes/auth.Router.js");
+const pool = require("../config/new_db.js");
 
 async function checkLicense(officeId, newStartTime, endTime) {
   try {
     // 1. Fetch all licenses for this office
-    const { data: officeLicenses, error: licenseError } = await supabase
-      .from("licenses")
-      .select("id")
-      .eq("office_id", officeId);
-
-    if (licenseError) {
-      console.error("Error fetching office licenses:", licenseError);
-      return true; // treat as busy
-    }
+    const licenseRes = await pool.query(
+      "SELECT id FROM licenses WHERE office_id = $1",
+      [officeId]
+    );
+    const officeLicenses = licenseRes.rows;
 
     if (!officeLicenses || officeLicenses.length === 0) {
       console.warn("No licenses found for this office:", officeId);
@@ -23,16 +20,13 @@ async function checkLicense(officeId, newStartTime, endTime) {
     const licenseIds = officeLicenses.map((l) => l.id);
 
     // 2. Fetch approved meetings tied to those licenses
-    const { data: meetings, error: meetingError } = await supabase
-      .from("meetings")
-      .select("license, start_time, duration_minutes")
-      .eq("status", "approved")
-      .in("license", licenseIds);
-
-    if (meetingError) {
-      console.error("Error fetching meetings:", meetingError);
-      return true;
-    }
+    const meetingRes = await pool.query(
+      `SELECT license, start_time, duration_minutes
+   FROM meetings
+   WHERE status = 'approved' AND license = ANY($1::int[])`,
+      [licenseIds]
+    );
+    const meetings = meetingRes.rows;
 
     let overlapCount = 0;
 
@@ -76,15 +70,11 @@ async function checkLicense(officeId, newStartTime, endTime) {
 async function checkRoom(officeId, newStartTime, endTime) {
   try {
     // 1. Fetch all rooms for this office
-    const { data: rooms, error: roomError } = await supabase
-      .from("conference_room")
-      .select("id")
-      .eq("office_id", officeId);
-
-    if (roomError) {
-      console.error("Error fetching rooms: ", roomError);
-      return false;
-    }
+    const roomRes = await pool.query(
+      "SELECT id FROM conference_room WHERE office_id = $1",
+      [officeId]
+    );
+    const rooms = roomRes.rows;
 
     if (!rooms || rooms.length === 0) {
       console.warn("No rooms found for this office:", officeId);
@@ -94,16 +84,13 @@ async function checkRoom(officeId, newStartTime, endTime) {
     const roomIds = rooms.map((room) => room.id);
 
     // 2. Fetch approved meetings in these rooms
-    const { data: meetings, error: meetingError } = await supabase
-      .from("meetings")
-      .select("conference_room_id, start_time, duration_minutes")
-      .eq("status", "approved")
-      .in("conference_room_id", roomIds);
-
-    if (meetingError) {
-      console.error("Error fetching meetings: ", meetingError);
-      return false;
-    }
+    const meetingRes = await pool.query(
+      `SELECT conference_room_id, start_time, duration_minutes
+   FROM meetings
+   WHERE status = 'approved' AND conference_room_id = ANY($1::int[])`,
+      [roomIds]
+    );
+    const meetings = meetingRes.rows;
 
     // 3. Track how many rooms are busy in that slot
     const busyRooms = new Set();
@@ -172,24 +159,15 @@ const addMeeting = async (req, res) => {
 
   // If all checks passed, save request in pending state
   // 1. Insert the meeting request
-  const { data: insertedMeeting, error: insertError } = await supabase
-    .from("meetings")
-    .insert([
-      {
-        title,
-        description,
-        start_time: start_time,
-        duration_minutes: duration_minutes,
-        requested_by: userId,
-        status: "pending", // initially pending
-        conference_room_id: null, // assigned later by admin
-        license: null, // assigned later by admin
-        link: null, // link generated later
-        want_room,
-      },
-    ])
-    .select()
-    .single();
+  const insertRes = await pool.query(
+    `INSERT INTO meetings
+   (title, description, start_time, duration_minutes, requested_by, status, conference_room_id, license, link, want_room)
+   VALUES ($1, $2, $3, $4, $5, 'pending', NULL, NULL, NULL, $6)
+   RETURNING *`,
+    [title, description, start_time, duration_minutes, userId, want_room]
+  );
+
+  const insertedMeeting = insertRes.rows[0];
 
   const meetingId = insertedMeeting.id;
 
@@ -206,16 +184,16 @@ const addMeeting = async (req, res) => {
     user_id,
   }));
 
-  const { error: participantError } = await supabase
-    .from("meeting_participants")
-    .insert(participantRows);
+  if (participantRows.length > 0) {
+    const values = participantRows
+      .map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`)
+      .join(",");
+    const flat = participantRows.flatMap((p) => [p.meeting_id, p.user_id]);
 
-  if (participantError) {
-    console.error("Error inserting participants:", participantError);
-    return res.status(500).json({
-      success: false,
-      message: "Meeting saved but failed to assign participants",
-    });
+    await pool.query(
+      `INSERT INTO meeting_participants (meeting_id, user_id) VALUES ${values}`,
+      flat
+    );
   }
 
   return res.status(200).json({
@@ -229,67 +207,57 @@ const getApprovedMeetingUser = async (req, res) => {
   const userId = req.user.userId;
   const officeId = req.user.officeId;
   try {
-    const { data, error } = await supabase
-      .from("meetings")
-      .select(
-        `
-      id,
-      title,
-      description,
-      start_time,
-      duration_minutes,
-      status,
-      want_room,
-      link,
-      conference_room:conference_room_id (
-        id,
-        name,
-        office_id
-      ),
-      users!meetings_requested_by_fkey (
-        name,
-        email,
-        office
-      )
-    `
-      )
-      .eq("status", "approved")
-      .eq("users.office", officeId) // ✅ filter by requester’s office
-      .order("start_time", { ascending: true });
+    const result = await pool.query(
+      `SELECT m.id, m.title, m.description, m.start_time, m.duration_minutes, m.status, 
+          m.want_room, m.link, m.conference_room_id,
+          cr.name AS conference_room_name,
+          u.name AS requested_by_name, u.email AS requested_by_email
+   FROM meetings m
+   LEFT JOIN conference_room cr ON m.conference_room_id = cr.id
+   LEFT JOIN users u ON m.requested_by = u.id
+   WHERE m.status = 'approved' AND u.office = $1
+   ORDER BY m.start_time ASC`,
+      [officeId]
+    );
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
-    }
+    const data = result.rows;
 
     // Transform data to match FullCalendar format
     const formattedEvents = data.map((meeting) => {
-      // Calculate end time based on start_time + duration_minutes
-      const startTime = new Date(
-        meeting.start_time.includes("T")
-          ? meeting.start_time
-          : meeting.start_time.replace(" ", "T") + "Z" // force ISO
-      );
+      let startTime;
+      if (meeting.start_time instanceof Date) {
+        startTime = meeting.start_time;
+      } else {
+        startTime = new Date(
+          meeting.start_time.includes("T")
+            ? meeting.start_time
+            : meeting.start_time.replace(" ", "T")
+        );
+      }
+
       const endTime = new Date(
         startTime.getTime() + (meeting.duration_minutes || 60) * 60000
       );
 
+      // Format without Z (local time)
+      const formatLocal = (d) => d.toISOString().slice(0, 19); // "YYYY-MM-DDTHH:mm:ss"
+
       return {
         id: meeting.id,
         title: meeting.title,
-        start: startTime.toISOString(),
-        end: endTime.toISOString(),
+        start: formatLocal(startTime), // no Z
+        end: formatLocal(endTime),
         extendedProps: {
           description: meeting.description,
           status: meeting.status,
           duration_minutes: meeting.duration_minutes,
           conference_room_id: meeting.conference_room_id,
-          conference_room_name: meeting.conference_room?.name,
-          requested_by_name: meeting.users?.name,
-          requested_by_email: meeting.users?.email,
+          conference_room_name: meeting.conference_room_name,
+          requested_by_name: meeting.requested_by_name,
+          requested_by_email: meeting.requested_by_email,
           want_room: meeting.want_room,
           link: meeting.link,
         },
-        // Color coding based on status
         backgroundColor: getStatusColor(meeting.status),
         borderColor: getStatusColor(meeting.status, true),
       };
@@ -315,11 +283,8 @@ const getStatusColor = (status, border = false) => {
 
 const getOffices = async (req, res) => {
   try {
-    const { data, error } = await supabase.from("offices").select("*");
-
-    if (error) throw error;
-
-    res.status(200).json(data);
+    const result = await pool.query("SELECT * FROM offices");
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching offices:", err.message);
     res.status(500).json({ error: "Failed to fetch offices" });
@@ -334,14 +299,10 @@ const getUsersByOffice = async (req, res) => {
       return res.status(400).json({ error: "Office ID is required" });
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("office", parseInt(office));
-
-    if (error) throw error;
-
-    res.status(200).json(data);
+    const result = await pool.query("SELECT * FROM users WHERE office = $1", [
+      parseInt(office),
+    ]);
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching users:", err.message);
     res.status(500).json({ error: "Failed to fetch users" });
@@ -350,11 +311,8 @@ const getUsersByOffice = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const { data, error } = await supabase.from("users").select("*");
-
-    if (error) throw error;
-
-    res.status(200).json(data);
+    const result = await pool.query("SELECT * FROM users");
+    res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error fetching users:", err.message);
     res.status(500).json({ error: "Failed to fetch users" });

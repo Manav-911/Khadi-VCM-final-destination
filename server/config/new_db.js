@@ -1,16 +1,20 @@
-const { Client } = require("pg");
-const dotenv = require("dotenv");
-dotenv.config();
+const { Pool } = require("pg");
 
-const client = new Client({
-  host: process.env.host,
-  port: process.env.port,
-  user: process.env.user,
-  password: process.env.password,
-  database: process.env.database,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+console.log("DB Config:", {
+  host: "database-1.clmssiaqs3g0.ap-south-1.rds.amazonaws.com",
+  port: 5432,
+  user: "postgres",
+  password: "*****", // hide password in logs
+  database: "rohan_database",
 });
 
-module.exports = client;
+const pool = new Pool({
+  host: "database-1.clmssiaqs3g0.ap-south-1.rds.amazonaws.com",
+  port: 5432,
+  user: "postgres",
+  password: "KhadiGroup",
+  database: "rohan_database",
+  ssl: { rejectUnauthorized: false }, // required for AWS RDS
+});
+
+module.exports = pool;

@@ -14,14 +14,10 @@ function tab1() {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
-  const [approvedMeetings, setApprovedMeetings] = useState([]);
   const [declinedMeetings, setDeclinedMeetings] = useState([]);
   const [pendingMeetings, setPendingMeetings] = useState([]);
-  const [showApproved, setShowApproved] = useState(false);
-  const [showDeclined, setShowDeclined] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [fetchMeetings, setfetchMeetings] = useState(null);
-  const [showPending, setShowPending] = useState(false);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [availableLicenses, setAvailableLicenses] = useState([]);
 
@@ -137,6 +133,8 @@ function tab1() {
       }
       if (data) {
         setfetchMeetings(data);
+        console.log(fetchMeetings);
+
         setFetchError(null);
       }
     };
@@ -153,6 +151,13 @@ function tab1() {
 
     fetchallMeetings();
   }, []);
+
+  const formatStr = (str) =>
+    new Date(str).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    });
 
   return (
     <div className="container">
@@ -174,7 +179,8 @@ function tab1() {
                 <strong>Title:</strong> {selectedMeeting.title}
               </p>
               <p>
-                <strong>Date and Time:</strong> {selectedMeeting.start_time}
+                <strong>Date and Time:</strong>{" "}
+                {formatStr(selectedMeeting.start_time)}
                 <br />
               </p>
               <p>
@@ -230,7 +236,7 @@ function tab1() {
                     <td>{f.id}</td>
                     <td>{f.title}</td>
                     <td>{f.want_room ? "Yes" : "No"}</td>
-                    <td>{f.start_time}</td>
+                    <td>{formatStr(f.start_time)}</td>
                     <td>{f.status}</td>
                     <td
                       style={{
