@@ -39,6 +39,14 @@ export default function Dashboard() {
                   Previous Meetings
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/dashboard/stat"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                >
+                  Meeting Status
+                </NavLink>
+              </li>
             </ul>
           </nav>
 

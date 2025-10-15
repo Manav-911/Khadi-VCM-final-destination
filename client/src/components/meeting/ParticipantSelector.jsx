@@ -38,7 +38,7 @@ export default function ParticipantSelector({
             ...p,
             officeName: officesMap[p.office] || "Unknown Office",
           }));
-
+          console.log("Fetched Participants:", participantsWithOffice);
           setParticipants(participantsWithOffice);
           setOffices(offRes.data || []);
         })
@@ -203,28 +203,28 @@ export default function ParticipantSelector({
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="ps-selected-summary">
-          <div>
-            <span className="ps-summary-label">Selected Individuals:</span>{" "}
-            {selectedIndividuals.length > 0 ? (
-              participants
-                .filter((p) => selectedIndividuals.includes(p.id))
-                .map((p) => p.name)
-                .join(", ")
-            ) : (
-              <span className="ps-summary-na">N/A</span>
-            )}
+          {/* Summary */}
+          <div className="ps-selected-summary">
+            <div>
+              <span className="ps-summary-label">Selected Individuals:</span>{" "}
+              {selectedIndividuals.length > 0 ? (
+                participants
+                  .filter((p) => selectedIndividuals.includes(p.id))
+                  .map((p) => p.name)
+                  .join(", ")
+              ) : (
+                <span className="ps-summary-na">N/A</span>
+              )}
+            </div>
+            <div>
+              <span className="ps-summary-label">Selected Offices:</span>{" "}
+              {selectedOffices.length > 0 ? (
+                selectedOffices.join(", ")
+              ) : (
+                <span className="ps-summary-na">N/A</span>
+              )}
+            </div>
           </div>
-          <div>
-            <span className="ps-summary-label">Selected Offices:</span>{" "}
-            {selectedOffices.length > 0 ? (
-              selectedOffices.join(", ")
-            ) : (
-              <span className="ps-summary-na">N/A</span>
-            )}
-          </div>
-        </div>
 
         {/* Actions */}
         <div className="ps-actions">

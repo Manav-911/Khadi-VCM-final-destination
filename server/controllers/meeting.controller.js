@@ -319,6 +319,72 @@ const getUsers = async (req, res) => {
   }
 };
 
+const getUserAllRequests = async (req, res) => {
+  // Assuming the user's ID is available on the request object after authentication
+  const userId = req.user.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: "User ID not found in session/token." });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          m.id,
+          m.title,
+          m.start_time,
+          m.duration_minutes,
+          m.want_room,
+          m.status,
+          m.description,
+          m.license,
+          u.name AS requested_by_name,
+          u.office AS requested_by_office
+        FROM meetings m
+        JOIN users u ON m.requested_by = u.id
+        WHERE m.requested_by = $1
+          -- Include all possible statuses: pending, approved, rejected, and cancelled
+          AND m.status IN ('pending', 'approved', 'rejected', 'cancelled')
+        ORDER BY m.start_time DESC`,
+      [userId]
+    );
+
+    const meetings = result.rows;
+
+    // Map the results to a client-friendly format
+    const clientFriendlyMeetings = meetings.map((m) => {
+      // The status 'rejected' or 'cancelled' often corresponds to 'denied' in UI terminology
+      const statusAlias = m.status === 'rejected' || m.status === 'cancelled' ? 'denied' : m.status;
+      
+      const start = new Date(m.start_time);
+      const end = new Date(start.getTime() + m.duration_minutes * 60000);
+
+      return {
+        id: m.id,
+        title: m.title,
+        status: statusAlias, // Use aliased status for client
+        original_status: m.status, // Keep original status for reference
+        start: start.toISOString(),
+        end: end.toISOString(),
+        extendedProps: {
+          description: m.description,
+          want_room: m.want_room,
+          license: m.license,
+          requested_by_name: m.requested_by_name,
+        },
+      };
+    });
+
+    console.log(`Fetched ${clientFriendlyMeetings.length} requests for user ${userId}.`);
+
+    res.json(clientFriendlyMeetings);
+  } catch (err) {
+    console.error("getUserAllRequests error:", err);
+    res.status(500).json({ error: "Failed to retrieve your meeting requests." });
+  }
+};
+
+
 module.exports = {
   addMeeting,
   checkLicense,
@@ -327,4 +393,5 @@ module.exports = {
   getOffices,
   getUsersByOffice,
   getUsers,
+  getUserAllRequests,
 };

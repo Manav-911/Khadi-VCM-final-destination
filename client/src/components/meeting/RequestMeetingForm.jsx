@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
-import { useMeetingContext } from "../../context/MeetingContext";
+import { useMeetingContext } from "../context/MeetingContext";
 import ParticipantSelector from "./ParticipantSelector";
 import "../meeting/requestmeetingform.css";
 
