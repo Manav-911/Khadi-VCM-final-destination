@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import MeetingService from "../../services/eventService";
 import "../scheduled/scheduledmeetings.css";
-import { useMeetingContext } from "../../context/MeetingContext"; // ✅ Import context
+import { useMeetingContext } from "../context/MeetingContext"; // ✅ Import context
 import axios from "axios";
 
 export default function ScheduledMeetings() {

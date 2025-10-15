@@ -5,7 +5,8 @@ import Dashboard from './pages/Dashboard';
 import CalendarView from './components/calendar/CalendarView';
 import RequestMeetingForm from './components/meeting/RequestMeetingForm';
 import PreviousMeeting from "./components/meeting/PreviousMeeting";
-import { MeetingProvider } from "./context/MeetingContext";
+import MeetingStatus from './components/meeting/MeetingStatus';
+import { MeetingProvider } from "../src/components/context/MeetingContext";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route index element={<CalendarView />} />
             <Route path="request" element={<RequestMeetingForm />} />
             <Route path="previous" element={<PreviousMeeting />} />
+            <Route path="stat" element={<MeetingStatus />} />
           </Route>
         </Routes>
       </MeetingProvider>

@@ -1,0 +1,288 @@
+/* UserMeetingStatus component styles (ums-) */
+
+/* Variable definitions (Optional, but good practice if not using global variables) */
+:root {
+  --primary-color: #1976d2; /* Blue */
+  --secondary-color: #ffc107; /* Yellow for Pending */
+  --success-color: #28a745; /* Green for Approved */
+  --text-color: #222;
+}
+
+.ums-container {
+  padding: 2rem 1rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ums-title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+/* Filters Layout */
+.ums-filters {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+/* Search Bar (Adopted from ps-search) */
+.ums-searchbar-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1; /* Allows it to take up more space */
+  max-width: 420px;
+}
+
+.ums-search {
+  width: 100%;
+  padding: 0.9rem 1.3rem;
+  border: 2px solid var(--primary-color);
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  background: #ffffff;
+  color: var(--text-color);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.ums-search::placeholder {
+  color: #555;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.ums-search:hover {
+  border-color: var(--primary-color);
+}
+
+.ums-search:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.5); /* Yellow focus glow */
+  background: #fff;
+  outline: none;
+}
+
+/* Date Filter */
+.ums-date-filter {
+  padding: 0.9rem 1.3rem;
+  border: 2px solid #ccc;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  background: #ffffff;
+  color: var(--text-color);
+}
+
+
+/* Grid and Card Styling */
+.ums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.ums-card {
+  background: #fff;
+  border-radius: 1.2rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, border 0.2s;
+  /* Add a color border that changes based on status (will be overridden by JS classes) */
+  border-left: 6px solid #ccc;
+}
+
+.ums-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+}
+
+.ums-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.ums-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1976d2;
+  flex-grow: 1;
+  padding-right: 10px;
+}
+
+.ums-card-desc {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: #444;
+}
+
+.ums-card-info {
+  font-size: 0.98rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: #333;
+}
+
+
+/* Status Indicator Styles */
+.ums-status {
+  padding: 0.2rem 0.8rem;
+  border-radius: 1rem; /* Highly rounded for a badge look */
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.status-approved {
+  background-color: var(--success-color); /* Green */
+  color: white;
+}
+/* Left border color matching the status for emphasis */
+.ums-card.status-approved-card {
+  border-left-color: var(--success-color);
+}
+
+.status-pending {
+  background-color: var(--secondary-color); /* Yellow */
+  color: #555; /* Darker text for readability on yellow */
+}
+.ums-card.status-pending-card {
+  border-left-color: var(--secondary-color);
+}
+
+/* Button Styling (Adopted from pm-btn) */
+.ums-btn {
+  background: #ccc; /* Default grey */
+  color: #333;
+  border: none;
+  border-radius: 2rem;
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+/* Specific Button Styles */
+.ums-btn-approved {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.ums-btn-approved:hover {
+  background: #1565c0;
+}
+
+.ums-btn-pending {
+  background: var(--secondary-color);
+  color: var(--text-color);
+}
+
+.ums-btn-pending:hover {
+  background: #e0a800;
+}
+
+
+/* Loading, Error, No Meetings */
+.ums-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.ums-loader {
+  border: 4px solid #eee;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: ums-spin 0.8s linear infinite;
+}
+
+@keyframes ums-spin {
+  0% { transform: rotate(0deg);}
+  100% { transform: rotate(360deg);}
+}
+
+.ums-error, .ums-no-meetings {
+  color: #d32f2f;
+  text-align: center;
+  font-size: 1.1rem;
+  margin-top: 2rem;
+}
+
+.ums-no-meetings {
+  grid-column: 1 / -1; /* Make it span the entire grid */
+  color: #666;
+  padding: 3rem;
+  border: 1px dashed #ccc;
+  border-radius: 10px;
+}
+
+
+/* CSS styles */
+.meeting-status-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.meeting-status-table th, .meeting-status-table td {
+  padding: 0.7rem;
+  border-bottom: 1px solid #eaeaea;
+}
+.status-approved { color: #1976d2; font-weight: 600; }
+.status-pending { color: #fbbf24; font-weight: 600; }
+.status-denied { color: #ef4444; font-weight: 600; }
+.edit-btn {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+}
+.edit-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.edit-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  min-width: 340px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+/* Add to your meetingstatus.css */
+
+.status-denied {
+  background-color: #f8d7da; /* Light Red */
+  color: #721c24; /* Dark Red Text */
+  border: 1px solid #f5c6cb;
+}
+/* You may also want a corresponding button style */
+.ums-btn-denied {
+  background: #dc3545; /* Bootstrap Red */
+  color: white;
+}
+.ums-btn-denied:hover {
+  background: #c82333;
+}
