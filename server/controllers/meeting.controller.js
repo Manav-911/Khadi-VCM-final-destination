@@ -215,7 +215,7 @@ const getApprovedMeetingUser = async (req, res) => {
    FROM meetings m
    LEFT JOIN conference_room cr ON m.conference_room_id = cr.id
    LEFT JOIN users u ON m.requested_by = u.id
-   WHERE m.status = 'approved' AND u.office = $1
+   WHERE (m.status = 'approved' OR m.status = 'completed') AND u.office = $1
    ORDER BY m.start_time ASC`,
       [officeId]
     );

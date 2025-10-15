@@ -1,6 +1,10 @@
 const supabase = require("../config/db.js");
 const express = require("express");
 const pool = require("../config/new_db.js");
+const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+const crypto = require("crypto");
+dotenv.config();
 
 const formatLocal = (d) => {
   const dt = new Date(d);
@@ -13,10 +17,43 @@ const formatLocal = (d) => {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "zap14479@gmail.com",
+    pass: "rbkq vxxq xgub bpdj",
+  },
+});
+
+console.log(process.env.EMAIL);
+console.log(process.env.PASSWORD);
+
+const updateCompletedMeetings = async () => {
+  const now = new Date();
+  try {
+    const result = await pool.query(
+      `UPDATE meetings
+       SET status = 'completed'
+       WHERE status IN ('approved', 'pending')
+       AND (start_time + (duration_minutes * interval '1 minute')) < $1
+       RETURNING id;`,
+      [now]
+    );
+
+    if (result.rowCount > 0) {
+      console.log("Completed meetings updated:", result.rows);
+    }
+    console.log(`Updated ${result.rowCount} meetings to 'completed'`);
+  } catch (err) {
+    console.error("updateCompletedMeetings error:", err);
+  }
+};
+
 const getPendingRequests = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
+    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
               m.status, m.description,
@@ -79,6 +116,7 @@ const getCancelledMeetings = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
+    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
@@ -101,6 +139,7 @@ const getApprovedMeeting = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
+    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
@@ -123,6 +162,7 @@ const getAvailableRooms = async (req, res) => {
   const { meeting_id } = req.query;
 
   try {
+    updateCompletedMeetings();
     const meetingRes = await pool.query(
       `SELECT m.start_time, m.duration_minutes, u.office
        FROM meetings m
@@ -220,11 +260,19 @@ const approveMeeting = async (req, res) => {
   const { meeting_id } = req.body;
 
   try {
+    updateCompletedMeetings();
     const meetingRes = await pool.query(
-      `SELECT m.id, m.start_time, m.duration_minutes, m.want_room, u.office
-       FROM meetings m
-       JOIN users u ON m.requested_by = u.id
-       WHERE m.id = $1`,
+      `SELECT 
+      m.id,
+      m.title,
+      m.start_time,
+      m.duration_minutes,
+      m.want_room,
+      u.office,
+      u.email AS requester_email
+   FROM meetings m
+   JOIN users u ON m.requested_by = u.id
+   WHERE m.id = $1`,
       [meeting_id]
     );
     if (meetingRes.rows.length === 0)
@@ -294,9 +342,12 @@ const approveMeeting = async (req, res) => {
         return res.status(400).json({ message: "No room available" });
     }
 
-    const meeting_link = `https://webex.com/meet/${Math.random()
-      .toString(36)
-      .substring(2, 10)}`;
+    //Generate meeting link
+    const meeting_link = `https://meet.jit.si/${crypto
+      .randomBytes(6)
+      .toString("hex")}`;
+
+    console.log("meeting link: ", meeting_link);
 
     await pool.query(
       `UPDATE meetings
@@ -309,6 +360,46 @@ const approveMeeting = async (req, res) => {
         meeting_id,
       ]
     );
+
+    const participantsRes = await pool.query(
+      `SELECT u.email
+       FROM meeting_participants mp
+       JOIN users u ON mp.user_id = u.id
+       WHERE mp.meeting_id = $1`,
+      [meeting_id]
+    );
+
+    const participantsEmails = participantsRes.rows.map((r) => r.email);
+    // Include requester if not already in participant list
+    if (!participantsEmails.includes(meeting.requester_email))
+      participantsEmails.push(meeting.requester_email);
+
+    // 6️⃣ Send emails to all participants
+    const subject = `Meeting Approved: ${meeting.title}`;
+    const message = `
+      Your meeting request has been approved!
+
+      Title: ${meeting.title}
+      Start Time: ${meeting.start_time}
+      Duration: ${meeting.duration_minutes} minutes
+      Meeting Link: ${meeting_link}
+
+      Please join using the above link at the scheduled time.
+      Do not share this link with anyone outside your organization.
+    `;
+
+    await Promise.all(
+      participantsEmails.map((email) =>
+        transporter.sendMail({
+          from: process.env.EMAIL,
+          to: email,
+          subject,
+          text: message,
+        })
+      )
+    );
+
+    console.log("Emails sent to participants:", participantsEmails);
 
     res.json({
       success: true,
@@ -326,21 +417,41 @@ const approveMeeting = async (req, res) => {
 // ✅ Reject Meeting
 const rejectMeeting = async (req, res) => {
   const { meeting_id } = req.body;
+
   try {
+    updateCompletedMeetings();
+    const meetingRes = await pool.query(
+      `SELECT m.title, u.email AS requester_email
+       FROM meetings m
+       JOIN users u ON m.requested_by = u.id
+       WHERE m.id = $1`,
+      [meeting_id]
+    );
+
+    if (meetingRes.rows.length === 0)
+      return res.status(404).json({ message: "Meeting not found" });
+
+    const meeting = meetingRes.rows[0];
+
     await pool.query(`UPDATE meetings SET status = 'rejected' WHERE id = $1`, [
       meeting_id,
     ]);
-    await pool.query(`DELETE FROM meeting_participants WHERE meeting_id = $1`, [
-      meeting_id,
-    ]);
 
-    res.json({
-      success: true,
-      message: "Meeting rejected and participants removed",
+    // Send rejection email only to requester
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: meeting.requester_email,
+      subject: `Meeting Rejected: ${meeting.title}`,
+      text: `
+        Your meeting request for "${meeting.title}" has been rejected.
+        Please contact your admin for more details.
+      `,
     });
+
+    res.json({ message: "Meeting rejected and requester notified" });
   } catch (err) {
-    console.error("rejectMeeting error:", err);
-    res.status(500).json({ error: "DB error" });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
