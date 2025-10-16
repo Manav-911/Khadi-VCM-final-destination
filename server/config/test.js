@@ -11,6 +11,6 @@ async function resetDatabase() {
   } finally {
     await client.end();
   }
-}s
+}
 
 resetDatabase();

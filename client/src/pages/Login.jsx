@@ -114,6 +114,10 @@ export default function Login() {
     navigate("/register");
   };
 
+  const handleForgotPassword = () => {
+    navigate("/forgot-password");
+  };
+
   return (
     <div className="page-container">
       {/* Fixed Header */}
@@ -167,6 +171,16 @@ export default function Login() {
                 )}
               </div>
 
+              <div className="forgot-password-link">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="link-button"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
               <button
                 type="submit"
                 className="login-button"
@@ -174,6 +188,8 @@ export default function Login() {
               >
                 {isSubmitting ? "LOGGING IN..." : "LOGIN"}
               </button>
+
+              
             </form>
           )}
         </div>

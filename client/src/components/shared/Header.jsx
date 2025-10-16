@@ -15,8 +15,8 @@ export default function Header() {
                 <div className="header-center">
                     <img src={centerLogo} alt="Khadi India Logo" className="center-logo" />
                     <div className="header-text">
-                        <h1><strong>Khadi & Village Industries Commission</strong></h1>
-                        <p>Ministry of Micro, Small & Medium Enterprises, Govt. of India</p>
+                        <h1><strong>KHADI & VILLAGE INDUSTRIES COMMISSION</strong></h1>
+                        <p>MINISTRY OF MICRO, SMALL & MEDIUM ENTERPRISES, GOVT. OF INDIA</p>
                     </div>
                 </div>
 

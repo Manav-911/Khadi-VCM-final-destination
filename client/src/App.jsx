@@ -7,6 +7,7 @@ import RequestMeetingForm from './components/meeting/RequestMeetingForm';
 import PreviousMeeting from "./components/meeting/PreviousMeeting";
 import MeetingStatus from './components/meeting/MeetingStatus';
 import { MeetingProvider } from "../src/components/context/MeetingContext";
+import ForgotPassword from './components/forgot/ForgotPassword';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route path="/dashboard" element={<Dashboard />}>
             <Route index element={<CalendarView />} />

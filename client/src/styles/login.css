@@ -31,7 +31,12 @@
   padding: 2.5rem;
   width: 100%;
   max-width: 450px;
+  max-height: 85vh;       /* ✅ Limit overall height */
+  overflow-y: auto;       /* ✅ Enable scrolling inside */
+  scrollbar-width: thin;  /* ✅ Firefox scrollbar size */
+  scrollbar-color: var(--gray) var(--lighter-gray); /* ✅ Custom scrollbar color */
 }
+
 
 .login-title {
   color: var(--primary-color);
@@ -163,3 +168,83 @@
 .form-group input.error {
   border-color: red;
 }
+
+.forgot-password-link {
+  text-align: right;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link-button:hover {
+  color: #0056b3;
+}
+
+
+/* ========================================= */
+/* RESPONSIVE FIX FOR SMALL SCREENS */
+/* ========================================= */
+@media (max-height: 700px) {
+  .login-main {
+    align-items: flex-start;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+    overflow-y: auto;
+  }
+
+  .login-container {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    max-width: 90%;
+    padding: 1.5rem;
+  }
+
+  .login-title {
+    font-size: 1.3rem;
+  }
+
+  .login-form {
+    gap: 1rem;
+  }
+
+  .login-button {
+    font-size: 0.95rem;
+    padding: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    max-width: 95%;
+    padding: 1rem;
+    border-radius: 6px;
+  }
+
+  .login-title {
+    font-size: 1.2rem;
+  }
+
+  .form-group input {
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .login-button {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+}
+
+
