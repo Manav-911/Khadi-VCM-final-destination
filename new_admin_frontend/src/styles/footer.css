@@ -1,6 +1,6 @@
 /* Fixed Footer Styles */
 .main-footer {
-  background-color: var(--primary-color);
+  background-color: #052d55;
   color: var(--white);
   padding: 1rem 0;
   position: sticky;

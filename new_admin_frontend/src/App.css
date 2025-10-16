@@ -3,7 +3,7 @@ body {
   font-family: sans-serif;
   background-color: #F5F5F5;
   color: white;
-  overflow: hidden;
+  overflow: auto;
 }
 .split {
   height: 100%;
@@ -62,11 +62,23 @@ body {
 
 .container {
   padding: 20px;
-  background-color: #F5F5F5;
+  background: linear-gradient(90deg, #1e3a5f 0%, #2c5282 100%);
 }
 
 h1 {
   margin-bottom: 10px;
+}
+.model-overlay {
+  position: fixed; /* or absolute */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5); /* might be blocking */
+  z-index: 1000; /* very high, overlays everything */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .header-buttons {
@@ -78,7 +90,7 @@ h1 {
 
 .schedule-btn,
 .simulate-btn,
-.view-approved-btn {
+/* .view-approved-btn {
   padding: 10px 20px;
   border-radius: 6px;
   border: none;
@@ -92,7 +104,7 @@ h1 {
   border: none;
   cursor: pointer;
   color: white;
-}
+} */
 
 .schedule-btn {
   background: #1d4ed8;
@@ -102,13 +114,13 @@ h1 {
   background: #16a34a;
 }
 
-.view-approved-btn {
+/* .view-approved-btn {
   background: #0ea5e9;
 }
 
 .view-declined-btn {
   background: #0ea5e9;
-}
+} */
 
 .content {
   display: flex;
@@ -121,21 +133,21 @@ h1 {
 }
 
 .btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: none;
-  background-color: #2355e6;
+  background: linear-gradient(135deg, #f0ac3e 0%, #ff930f 100%);
   color: white;
-  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+.btn:hover {transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(248, 248, 244, 0.4);
 }
   .active{
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    background-color: white;
-    color: black;
+    background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  color: rgb(0, 0, 0);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
   }
-
+  .active:hover {transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(205, 176, 15, 0.4);
+  }
 
 .left-panel, .right-panel {
   background-color: #F5F5F5;
@@ -146,16 +158,15 @@ h1 {
   box-sizing: border-box;
 }
 
-.right-panel-meeting{
-  background-color: white;
+.right-panel-meeting {
+  background: rgb(235, 235, 235);
   color: black;
   padding: 10px;
   max-height: 90vh;          /* Limit height to 90% of viewport */
-  overflow-y: auto;          /* Scroll if content is long */
-  flex: 1;                   /* Take available space */
+  overflow: auto;          /* ✅ Enables vertical scroll */
+  flex: 1;                   /* Takes remaining space */
   box-sizing: border-box;
   border-radius: 6px;
-
 }
 
 .left-panel-meeting {
@@ -166,11 +177,14 @@ h1 {
   overflow-y: auto;          /* Scroll if content is long */
   flex: 1;                   /* Take available space */
   box-sizing: border-box;
+  border-radius: 6px;
 }
 .container {
   display: flex;
   gap: 20px;
-  height: 800px;
+  height: 800px;          /* ✅ give structure to layout */
+  overflow: hidden; 
+
 }
 
 
@@ -197,7 +211,7 @@ h1 {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: #1f4ed8;
+  background-color: #9f1010;
   color: white;
   border: none;
   padding: 6px 10px;
@@ -207,8 +221,8 @@ h1 {
 
 .add-user-btn {
   position: absolute;
-  top: 288px;
-  left: 800px;
+  top: 190px;
+  left: 500px;
   background: #FDBF59;
   color: white;
   border: none;
@@ -217,26 +231,43 @@ h1 {
   cursor: pointer;
 }
 
-.approve-btn {
-  margin-top: 10px;
-  background: #1f4ed8;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
+.approve-btn,
+.decline-btn {
   width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 12px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.approve-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+.approve-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
 }
 
 .decline-btn {
-  margin-top: 10px;
-  background: #1f4ed8;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
-  width: 100%;
-  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
+.decline-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4);
 }
 
 table {
@@ -391,12 +422,14 @@ h1 {
 .content {
   display: flex;
   gap: 20px;
-  background-color: #F5F5F5;
+  background: linear-gradient(90deg, #1e3a5f 0%, #2c5282 100%);
+  overflow: hidden; 
 }
 
 .left-panel, .right-panel {
   padding: 20px;
   border-radius: 8px;
+  background: none;
 }
 
 .right-panel {
@@ -560,7 +593,11 @@ tr:hover {
 
 .meeting-table{
   background-color: rgb(182, 182, 182);
-  color: white;
+  overflow: auto;
+}
+.tablerow{
+  background: white;
+  color: rgb(79, 79, 79);
 }
 .left-btn {
   position: absolute;
@@ -580,7 +617,7 @@ tr:hover {
   margin-bottom: 8px; /* space between button and table */
 }
   .tr{
-    background-color: #195577;
+    background: linear-gradient(135deg, #1e5a7d 0%, #2563eb 100%);
   }
   .tr:hover{
     background-color: #535555;
@@ -591,6 +628,8 @@ tr:hover {
 td, th{
   border-bottom: none;
   border-top: none;
+  border-right: none;
+  border-left: none;
 }
 
 .participants-list {
@@ -601,4 +640,52 @@ td, th{
   padding: 10px;
   border-radius: 6px;
   color: #0f1115;
+}
+
+.footer {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+  color: #ffffff;
+  text-align: center;
+  padding: 30px 60px;
+  margin-top: auto;
+  border-top: 3px solid #2563eb;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.footer h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.footer p {
+  margin: 0;
+  font-size: 14px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+.close-form-btn{
+  margin-top: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #f64b42 0%, #af0808 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  font-family: inherit;
+}
+
+.close-form-btn:hover {
+  background: linear-gradient(135deg, #eb2525 0%, #d84c1d 100%);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  transform: translateY(-2px);
+}
+
+.close-form-btn:active {
+  transform: translateY(0);
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import MeetingService from "../../services/eventServices.js";
+import MeetingService from "../../services/eventServices";
 import "../calendar/calendarview.css";
 import axios from "axios";
 
@@ -13,16 +13,18 @@ export default function CalendarView() {
 
   // Fetch meetings from API
   const fetchMeetings = async () => {
-    const token = localStorage.getItem("token");
-    console.log("Token retrieved from localStorage:", token);
-
     try {
       setLoading(true);
       const meetingsData = await axios.get(
         "http://localhost:3000/meeting/approved_meetings",
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          withCredentials: true,
+        }
       );
-      setMeetings(meetingsData.data);
+      setMeetings(meetingsData);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch meetings:", err);
@@ -32,12 +34,6 @@ export default function CalendarView() {
     }
   };
 
-  const formatStr = (str) =>
-    new Date(str).toLocaleString("en-IN", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-
   useEffect(() => {
     fetchMeetings();
   }, []);
@@ -46,14 +42,12 @@ export default function CalendarView() {
   const handleEventClick = (clickInfo) => {
     const meeting = clickInfo.event;
     const props = meeting.extendedProps;
-    console.log(meeting);
 
-    console.log(meetings);
     setSelectedMeeting({
       title: meeting.title,
       description: props.description || "No description",
-      start: formatStr(meeting.startStr),
-      end: formatStr(meeting.endStr),
+      start: meeting.start.toLocaleString(),
+      end: meeting.end.toLocaleString(),
       status: props.status || "pending",
       duration: props.duration_minutes || 60,
       room: props.conference_room_name || "No room assigned",
@@ -92,7 +86,6 @@ export default function CalendarView() {
         height="auto"
         slotMinTime="00:00:00"
         slotMaxTime="24:00:00"
-        timeZone="IST"
         allDaySlot={false}
         nowIndicator={true}
         editable={false}

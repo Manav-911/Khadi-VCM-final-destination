@@ -1,16 +1,15 @@
 import React from "react";
 import { useState } from "react";
-import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Tab1 from "../components/tab1";
 import Tab2 from "../components/tab2";
 import Tab3 from "../components/tab3";
 import "../styles/page.css";
 import "../App.css";
-import ScheduleMeeting from "../components/ScheduleMeeting.jsx";
-import Header from "../components/shared/Header.jsx";
+import RequestMeeting from "../components/meeting/RequestMeetingForm.jsx";
 import Footer from "../components/shared/Footer.jsx";
+import Header from "../components/shared/Header.jsx";
 import ManageUser from "../components/ManageUsers/ManageUser.jsx";
-import supabase from "../config/supabaseClient.js";
 import CalendarView from "../components/calendar/CalendarView.jsx";
 import AddUser from "../components/ManageUsers/AddUser.jsx";
 import { useEffect } from "react";
@@ -23,17 +22,14 @@ function TabsTemp() {
 
   return (
     <div style={{ backgroundColor: "#F5F5F5" }}>
-      <div className="header">
-        <Header />
-      </div>
+      <Header />
       <div className="content">
         <div className="left-panel">
           <div className="button-group">
             <button className="btn" onClick={() => setOpenPopup(true)}>
-              Schedule Meeting
+              Request Meeting
             </button>
             <button className="btn" onClick={() => setUser("manage")}>
-              {" "}
               Manage user
             </button>
             <button className="btn" onClick={() => setUser("cal")}>
@@ -41,37 +37,42 @@ function TabsTemp() {
             </button>
           </div>
         </div>
-        <div className="model-overlay">
-          <ScheduleMeeting
-            open={openPopup}
-            onClose={() => setOpenPopup(false)}
-          />
-        </div>
+        
+        {/* Conditionally render the overlay only when openPopup is true */}
+        {openPopup && (
+          <div className="model-overlay">
+            <RequestMeeting
+              open={openPopup}
+              onClose={() => setOpenPopup(false)}
+            />
+          </div>
+        )}
+        
         <div className="right-panel">
           <div className="button-group">
             <button
-              className={action === "Tab1" ? "btn" : "btn active"}
-              onClick={() => {
-                setAction("Tab1");
-              }}
+              className={action === "Tab1" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab1")}
             >
               Pending
             </button>
             <button
-              className={action === "Tab2" ? "btn" : "btn active"}
-              onClick={() => {
-                setAction("Tab2");
-              }}
+              className={action === "Tab2" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab2")}
             >
               Approved
             </button>
             <button
-              className={action === "Tab3" ? "btn" : "btn active"}
-              onClick={() => {
-                setAction("Tab3");
-              }}
+              className={action === "Tab3" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab3")}
             >
               Declined
+            </button>
+            <button
+              className={action === "Tab3" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab3")}
+            >
+              Completed
             </button>
           </div>
         </div>
@@ -87,30 +88,68 @@ function TabsTemp() {
           {action === "Tab3" ? <Tab3 /> : null}
         </div>
       </div>
+      <Footer /> 
     </div>
   );
 }
 
 function Tabs() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   useEffect(() => {
     console.log("FULL URL:", window.location.href);
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    //console.log("TOKEN FROM URL:", token);
+    const tokenFromUrl = params.get("token");
+    const tokenFromStorage = localStorage.getItem("token");
 
-    if (token) {
-      localStorage.setItem("token", token);
-      // console.log(
-      //   "Token saved in localStorage:",
-      //   localStorage.getItem("token")
-      // );
-
-      // Optional: clean up URL
+    if (tokenFromUrl) {
+      // Token in URL takes priority
+      localStorage.setItem("token", tokenFromUrl);
+      console.log("✅ Token saved from URL");
+      setIsAuthenticated(true);
+      // Clean up URL
       window.history.replaceState({}, document.title, "/tabs");
+    } else if (tokenFromStorage) {
+      // Check if token exists in localStorage
+      console.log("✅ Token found in localStorage");
+      setIsAuthenticated(true);
     } else {
-      console.warn("⚠️ No token found in URL");
+      console.warn("⚠️ No token found - Please login");
+      setIsAuthenticated(false);
+      // Optionally redirect to login
+      // navigate('/login');
     }
   }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        <div>
+          <p>⚠️ Authentication required</p>
+          <p>Please ensure you have a valid token in the URL or localStorage.</p>
+          <button 
+            onClick={() => window.location.href = '/'} 
+            style={{ 
+              marginTop: '20px',
+              padding: '10px 20px',
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <>
       <TabsTemp />

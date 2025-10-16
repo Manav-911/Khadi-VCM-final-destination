@@ -7,8 +7,8 @@ import axios from "axios";
 import { useEffect } from "react";
 import "../App.css";
 import CalendarView from "../components/calendar/CalendarView.jsx";
-import supabase from "../config/supabaseClient.js";
-const URL = "http://localhost:5000";
+// import supabase from "../config/supabaseClient.js";
+const URL = "http://localhost:3000";
 
 function tab1() {
   const navigate = useNavigate();

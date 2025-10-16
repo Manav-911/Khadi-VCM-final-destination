@@ -1,8 +1,10 @@
 import React from "react";
-import "../../styles/ScheduleMeeting.css"; // Optional: include styling
+import "../meeting/requestmeetingform.css" // Optional: include styling
 import { useState } from "react";
-import supabase from "../../config/supabaseClient";
+// import supabase from "../../config/supabaseClient";
 import axios from "axios";
+import "./addUser.css";
+import "../../App.css";
 
 function AddUser({ open, onClose }) {
   if (!open) return null; // Don't render anything if not open
@@ -51,43 +53,74 @@ function AddUser({ open, onClose }) {
   };
 
   return (
-    <div className="overlay">
-      <div className="popup">
-        <h2>Add New User</h2>
-        <form>
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {/* <input type="text" placeholder="Office" value={office} onChange={(e=>setOffice(e.target.value))} required/> */}
-          <input
-            type="tel"
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
+    <div className="meeting-form-container popup">
+      <div className="form-wrapper">
+        <div className="form-header">
+          <h2 className="form-title">Add User</h2>
+          <button type="button" className="close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <form className="request-form">
+          <div className="form-group">
+            <label>Name</label>
+            <input
+              type="text"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="e.g. abc@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Office</label>
+            <input
+              type="text"
+              placeholder="e.g. New York"
+              value={office}
+              onChange={(e) => setOffice(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Phone</label>
+            <input
+              type="tel"
+              placeholder="e.g. (123) 456-7890"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </div>
+
           <button type="submit" onClick={handleSubmit}>
             Add
           </button>
-          <button type="close-btn" onClick={onClose}>
+          <button className="close-form-btn" onClick={onClose}>
             Close
           </button>
         </form>

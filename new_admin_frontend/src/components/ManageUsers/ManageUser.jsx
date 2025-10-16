@@ -3,10 +3,12 @@ import supabase from "../../config/supabaseClient";
 import { useState, useEffect } from "react";
 import AddUser from "./AddUser";
 import axios from "axios";
+import "../../App.css";
 
 function ManageUser() {
   const [fetchAll, setFetchAll] = useState([]);
-  const [openPopup1, setOpenPopup1] = useState(false);
+  const [action, setAction] = useState("Nouser");
+  const [openPopup, setOpenPopup] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -58,12 +60,10 @@ function ManageUser() {
   };
 
   return (
-    <div>
-      <div>
-        <button className="left-btn" onClick={() => setOpenPopup1(true)}>
-          Add user
-        </button>
-      </div>
+    <>
+      <button className="add-user-btn" onClick={() => {setAction("user"); setOpenPopup(true)}}>
+        ADD USER
+      </button>
       <table className="meeting-table">
         <thead>
           <tr className="meeting-table tr">
@@ -99,10 +99,19 @@ function ManageUser() {
           )}
         </tbody>
       </table>
-      <div className="model-overlay">
-        <AddUser open={openPopup1} onClose={() => setOpenPopup1(false)} />
-      </div>
-    </div>
+      {action === "user" && openPopup && (
+        <div className="model-overlay">
+          <AddUser
+            open={true}
+            onClose={() => {
+              setAction("Nouser");
+              setOpenPopup(false);
+            }}
+          />
+        </div>
+)}
+
+    </>
   );
 }
 

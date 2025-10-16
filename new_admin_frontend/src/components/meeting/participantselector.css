@@ -1,0 +1,221 @@
+.ps-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ps-modal {
+  background: #f8f8fc;
+  border-radius: 18px;
+  padding: 2.2rem 1.7rem 1.5rem 1.7rem;
+  min-width: 420px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  position: relative;
+  animation: ps-modal-in 0.25s cubic-bezier(.4,2,.6,1);
+}
+@keyframes ps-modal-in {
+  from { opacity: 0; transform: translateY(40px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+.ps-modal-elevated {
+  border: 1.5px solid #e3e7ef;
+}
+.ps-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.18s;
+  z-index: 2;
+}
+.ps-close-btn:hover {
+  color: #1976d2;
+}
+.ps-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  color: #223;
+  letter-spacing: 0.5px;
+}
+.ps-searchbar-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* Add this line to vertically center */
+  margin-bottom: 1.2rem;
+}
+.ps-search {
+  width: 100%;
+  max-width: 340px;
+  padding: 0.6rem 1rem;
+  border: 2px solid #b0c4de;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  background: #f4f8ff;
+  outline: none;
+  transition: border 0.18s;
+}
+.ps-search:focus {
+  border-color: #1976d2;
+}
+.ps-table {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  background: #eaf3fa;
+  margin-bottom: 1.2rem;
+}
+.ps-table-header {
+  display: flex;
+  background: #d0d8e8;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #dbeafe;
+}
+.ps-table-header > div {
+  flex: 1;
+  padding: 0.7rem 0.2rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.ps-header-icon {
+  font-size: 1.2em;
+  vertical-align: middle;
+}
+.ps-table-body {
+  display: flex;
+  max-height: 260px; /* Set a fixed height for the participant area */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.ps-col {
+  flex: 1;
+  padding: 0.7rem 0.5rem;
+  border-right: 1px solid #dbeafe;
+  min-width: 160px;
+  background: #f8fafc;
+  overflow-y: auto;
+  max-height: 240px; /* Ensure columns don't grow beyond modal */
+}
+.ps-col:last-child {
+  border-right: none;
+}
+.ps-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.18s;
+  cursor: pointer;
+}
+.ps-row-selected {
+  background: #e0f2fe;
+}
+.ps-row input[type="checkbox"] {
+  accent-color: #1976d2;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.3em;
+}
+.ps-row-name {
+  flex: 1;
+  color: #223;
+}
+.ps-empty {
+  color: #888;
+  font-size: 0.98em;
+  padding: 0.6em 0;
+  text-align: center;
+}
+.ps-selected-summary {
+  background: #f4f6fa;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.2rem;
+  font-size: 1rem;
+  color: #222;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.ps-summary-label {
+  color: #1976d2;
+  font-weight: 500;
+  margin-right: 0.3rem;
+}
+.ps-summary-na {
+  color: #888;
+  font-style: italic;
+}
+.ps-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.ps-btn {
+  background: linear-gradient(135deg, #1976d2, #63b3ed);
+  color: #fff;
+  border: none;
+  border-radius: 1.5rem;
+  padding: 0.5rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+.ps-btn:hover {
+  background: linear-gradient(135deg, #1251a3, #1976d2);
+  transform: translateY(-2px);
+}
+.ps-btn-cancel {
+  background: #aaa;
+}
+.ps-btn-cancel:hover {
+  background: #888;
+}
+
+/* Hide scrollbars for a cleaner look (optional) */
+.ps-col::-webkit-scrollbar {
+  width: 6px;
+  background: #eaf3fa;
+}
+.ps-col::-webkit-scrollbar-thumb {
+  background: #dbeafe;
+  border-radius: 6px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .ps-modal {
+    min-width: 95vw;
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+  }
+  .ps-table-header > div {
+    font-size: 1rem;
+    padding: 0.5rem 0.1rem;
+  }
+  .ps-search {
+    font-size: 1rem;
+    padding: 0.5rem 0.7rem;
+  }
+}
