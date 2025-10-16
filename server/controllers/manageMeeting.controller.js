@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
 const { get } = require("http");
+const axios = require("axios");
 dotenv.config();
 
 const formatLocal = (d) => {
@@ -371,25 +372,61 @@ const approveMeeting = async (req, res) => {
         return res.status(400).json({ message: "No room available" });
     }
 
-    //Generate meeting link
-    const meeting_link = `https://meet.jit.si/${crypto
-      .randomBytes(6)
-      .toString("hex")}`;
+    // Get full license details including tokens
+    const licenseDetails = await pool.query(
+      `SELECT * FROM licenses WHERE id = $1`,
+      [availableLicense.id]
+    );
 
-    console.log("meeting link: ", meeting_link);
+    if (licenseDetails.rows.length === 0)
+      return res.status(400).json({ message: "License details not found" });
 
+    const license = licenseDetails.rows[0];
+    console.log("🔑 Using license:", license.account);
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(license);
+    console.log("✅ Access token ready");
+
+    // Create Webex meeting
+    const startISO = new Date(meeting.start_time).toISOString();
+    const endISO = new Date(
+      new Date(meeting.start_time).getTime() + meeting.duration_minutes * 60000
+    ).toISOString();
+
+    console.log("🔄 Creating Webex meeting...");
+
+    const webexMeetingRes = await axios.post(
+      "https://webexapis.com/v1/meetings",
+      {
+        title: meeting.title,
+        start: startISO,
+        end: endISO,
+        agenda: meeting.description || "Meeting created by system",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const meeting_link = webexMeetingRes.data.webLink;
+    const webexMeetingId = webexMeetingRes.data.id;
+    console.log("✅ Webex meeting created:", meeting_link);
     await pool.query(
       `UPDATE meetings
-       SET license = $1, conference_room_id = $2, status = 'approved', link = $3
-       WHERE id = $4`,
+   SET license = $1, conference_room_id = $2, status = 'approved', link = $3, webex_meeting_id = $4
+   WHERE id = $5`,
       [
         availableLicense.id,
         assignedRoom ? assignedRoom.id : null,
         meeting_link,
+        webexMeetingId,
         meeting_id,
       ]
     );
-
     const participantsRes = await pool.query(
       `SELECT u.email
        FROM meeting_participants mp
@@ -534,6 +571,116 @@ const addMeeting = async (req, res) => {
     res.status(500).json({ error: "DB error" });
   }
 };
+
+const acceptMeetingRecordingRequest = async (req, res) => {
+  const { request_id } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE meeting_recording_request
+       SET status = 'accepted'
+       WHERE id = $1
+       RETURNING *;`,
+      [request_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const updatedRequest = result.rows[0];
+    res.json({
+      message: "Recording request accepted",
+      request: updatedRequest,
+    });
+  } catch (err) {
+    console.error("Error accepting recording request:", err);
+    res.status(500).json({ error: "DB error" });
+  }
+};
+
+const rejectMeetingRecordingRequest = async (req, res) => {
+  const { request_id } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE meeting_recording_request
+       SET status = 'rejected'
+       WHERE id = $1
+       RETURNING *;`,
+      [request_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const updatedRequest = result.rows[0];
+    res.json({
+      message: "Recording request rejected",
+      request: updatedRequest,
+    });
+  } catch (err) {
+    console.error("Error rejecting recording request:", err);
+    res.status(500).json({ error: "DB error" });
+  }
+};
+
+async function getValidAccessToken(license) {
+  const now = new Date();
+
+  // Check if we have a valid access token
+  if (
+    license.access_token &&
+    license.token_expiry &&
+    new Date(license.token_expiry) > now
+  ) {
+    console.log("✅ Using existing valid access token");
+    return license.access_token;
+  }
+
+  console.log("🔄 Access token expired or missing, refreshing...");
+
+  try {
+    const response = await axios.post(
+      "https://webexapis.com/v1/access_token",
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: license.client_id,
+        client_secret: license.client_secret,
+        refresh_token: license.refresh_token,
+      }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    const newAccessToken = response.data.access_token;
+    const newRefreshToken = response.data.refresh_token;
+    const expiresIn = response.data.expires_in;
+
+    console.log("✅ New access token obtained");
+    console.log("Expires in:", expiresIn, "seconds");
+
+    // Update both tokens and expiry in DB
+    const expiryTime = new Date();
+    expiryTime.setSeconds(expiryTime.getSeconds() + expiresIn - 60); // 60 second safety margin
+
+    await pool.query(
+      `UPDATE licenses 
+       SET access_token = $1, refresh_token = $2, token_expiry = $3
+       WHERE id = $4`,
+      [newAccessToken, newRefreshToken, expiryTime, license.id]
+    );
+
+    console.log("✅ Tokens updated in database");
+    return newAccessToken;
+  } catch (err) {
+    console.error(
+      "❌ Failed to refresh access token:",
+      err.response?.data || err.message
+    );
+    throw err;
+  }
+}
 
 module.exports = {
   getPendingRequests,

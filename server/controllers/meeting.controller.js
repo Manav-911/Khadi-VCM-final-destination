@@ -366,6 +366,67 @@ const cancelUserMeeting = async (req, res) => {
   }
 };
 
+const requestMeetingRecording = async (req, res) => {
+  const { meetingId } = req.params;
+  const userId = req.user.userId; // Assuming this comes from your auth middleware
+
+  try {
+    // 1. Check if the meeting exists (your existing code)
+    const meetingQuery = "SELECT id FROM meetings WHERE id = $1";
+    const meetingResult = await pool.query(meetingQuery, [meetingId]);
+
+    if (meetingResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+
+    // **NEW**: Check for an existing request to prevent duplicates
+    const existingRequestQuery = `
+      SELECT id FROM meeting_recording_request 
+      WHERE meeting_id = $1 AND requested_by = $2
+    `;
+    const existingRequestResult = await pool.query(existingRequestQuery, [
+      meetingId,
+      userId,
+    ]);
+
+    if (existingRequestResult.rows.length > 0) {
+      return res
+        .status(409) // 409 Conflict is a good status code for this
+        .json({
+          success: false,
+          message: "You have already requested a recording for this meeting.",
+        });
+    }
+
+    // 2. **NEW**: Insert the recording request into the new table
+    const insertQuery = `
+      INSERT INTO meeting_recording_request (meeting_id, requested_by) 
+      VALUES ($1, $2)
+      RETURNING id, status; 
+    `;
+    // The 'status' column will automatically default to 'pending'
+    const newRequestResult = await pool.query(insertQuery, [meetingId, userId]);
+
+    const newRequest = newRequestResult.rows[0];
+
+    // 3. Send a success response
+    return res.status(201).json({
+      // 201 Created is more appropriate here
+      success: true,
+      message: "Recording request submitted successfully.",
+      request: newRequest, // Send back the newly created request info
+    });
+  } catch (error) {
+    console.error("Error creating recording request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while creating recording request",
+    });
+  }
+};
+
 module.exports = {
   addMeeting,
   checkLicense,
