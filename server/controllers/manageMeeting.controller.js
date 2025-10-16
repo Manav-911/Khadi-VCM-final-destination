@@ -4,6 +4,7 @@ const pool = require("../config/new_db.js");
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
+const { get } = require("http");
 dotenv.config();
 
 const formatLocal = (d) => {
@@ -51,6 +52,7 @@ const updateCompletedMeetings = async () => {
 
 const getPendingRequests = async (req, res) => {
   const officeId = req.user.officeId;
+  console.log(officeId);
 
   try {
     updateCompletedMeetings();
@@ -118,7 +120,7 @@ const getCancelledMeetings = async (req, res) => {
   try {
     updateCompletedMeetings();
     const result = await pool.query(
-      `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
+      `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room, m.description, m.status,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
        FROM meetings m
        JOIN users u ON m.requested_by = u.id
@@ -141,7 +143,7 @@ const getApprovedMeeting = async (req, res) => {
   try {
     updateCompletedMeetings();
     const result = await pool.query(
-      `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
+      `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,m.description,m.status,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
        FROM meetings m
        JOIN users u ON m.requested_by = u.id
@@ -154,6 +156,29 @@ const getApprovedMeeting = async (req, res) => {
     res.json(filtered);
   } catch (err) {
     console.error("getApprovedMeeting error:", err);
+    res.status(500).json({ error: "DB error" });
+  }
+};
+
+const getCompletedMeetings = async (req, res) => {
+  const officeId = req.user.officeId;
+
+  try {
+    updateCompletedMeetings();
+    const result = await pool.query(
+      `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room, m.description, m.status,
+              u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
+       FROM meetings m
+       JOIN users u ON m.requested_by = u.id
+       WHERE m.status = 'completed'`
+    );
+
+    const filtered = result.rows.filter(
+      (m) => m.requested_by_office === officeId
+    );
+    res.json(filtered);
+  } catch (err) {
+    console.error("getCompletedMeetings error:", err);
     res.status(500).json({ error: "DB error" });
   }
 };
@@ -269,6 +294,8 @@ const approveMeeting = async (req, res) => {
       m.duration_minutes,
       m.want_room,
       u.office,
+      m.description,
+      m.status,
       u.email AS requester_email
    FROM meetings m
    JOIN users u ON m.requested_by = u.id
@@ -279,6 +306,8 @@ const approveMeeting = async (req, res) => {
       return res.status(404).json({ message: "Meeting not found" });
 
     const meeting = meetingRes.rows[0];
+    console.log("meeting", meetingRes.rows);
+
     const officeId = meeting.office;
     const start = new Date(meeting.start_time);
     const end = new Date(start.getTime() + meeting.duration_minutes * 60000);
@@ -510,6 +539,7 @@ module.exports = {
   getPendingRequests,
   getCancelledMeetings,
   getApprovedMeeting,
+  getCompletedMeetings,
   getAvailableRooms,
   getAvailableLicenses,
   approveMeeting,

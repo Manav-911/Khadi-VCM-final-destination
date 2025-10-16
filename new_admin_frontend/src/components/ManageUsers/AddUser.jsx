@@ -1,5 +1,5 @@
 import React from "react";
-import "../meeting/requestmeetingform.css" // Optional: include styling
+import "../meeting/requestmeetingform.css"; // Optional: include styling
 import { useState } from "react";
 // import supabase from "../../config/supabaseClient";
 import axios from "axios";
@@ -12,7 +12,6 @@ function AddUser({ open, onClose }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [office, setOffice] = useState("");
   const [phone, setPhone] = useState("");
   const [formError, setFormError] = useState(null);
 
@@ -21,7 +20,7 @@ function AddUser({ open, onClose }) {
 
     e.preventDefault();
 
-    if (!name || !email || !password || !office || !phone) {
+    if (!name || !email || !password || !phone) {
       setFormError("Please fill in all fields correctly");
       console.log("fill all details");
     }
@@ -32,7 +31,6 @@ function AddUser({ open, onClose }) {
         name,
         email,
         password,
-        office,
         phone,
       },
       {
@@ -91,17 +89,6 @@ function AddUser({ open, onClose }) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Office</label>
-            <input
-              type="text"
-              placeholder="e.g. New York"
-              value={office}
-              onChange={(e) => setOffice(e.target.value)}
               required
             />
           </div>

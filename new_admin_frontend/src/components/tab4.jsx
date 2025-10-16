@@ -6,7 +6,7 @@ import axiosInstance from "../config/axiosConfig"; // Use configured axios
 import { useEffect } from "react";
 import "../App.css";
 
-function tab1() {
+function tab4() {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -136,122 +136,110 @@ function tab1() {
 
   return (
     <div className="right-panel-meeting">
-          <h3>MEETING DETAILS</h3>
-          <button
-            className="clear-btn"
-            onClick={() => setSelectedMeeting(null)}
-          >
-            CLEAR
-          </button>
-          {selectedMeeting ? (
-            <>
-              <p>
-                <strong>Meeting ID:</strong> {selectedMeeting.id}
-              </p>
-              <p>
-                <strong>Title:</strong> {selectedMeeting.title}
-              </p>
-              <p>
-                <strong>Date and Time:</strong>{" "}
-                {formatStr(selectedMeeting.start_time)}
-                <br />
-              </p>
-              <p>
-                <strong>Purpose:</strong>
-                <br />
-                {selectedMeeting.description}
-              </p>
-              <p>
-                <strong>Status:</strong> {selectedMeeting.status}
-              </p>
-              {selectedMeeting.status && (
-                <>
-                  <button className="approve-btn" onClick={handleApprove}>
-                    APPROVE
-                  </button>
-                  <button className="decline-btn" onClick={handleDecline}>
-                    DECLINE
-                  </button>
-                </>
-              )}
-            </>
-          ) : (
-            <p>Select a meeting to view details</p>
+      <h3>MEETING DETAILS</h3>
+      <button className="clear-btn" onClick={() => setSelectedMeeting(null)}>
+        CLEAR
+      </button>
+      {selectedMeeting ? (
+        <>
+          <p>
+            <strong>Meeting ID:</strong> {selectedMeeting.id}
+          </p>
+          <p>
+            <strong>Title:</strong> {selectedMeeting.title}
+          </p>
+          <p>
+            <strong>Date and Time:</strong>{" "}
+            {formatStr(selectedMeeting.start_time)}
+            <br />
+          </p>
+          <p>
+            <strong>Purpose:</strong>
+            <br />
+            {selectedMeeting.description}
+          </p>
+          <p>
+            <strong>Status:</strong> {selectedMeeting.status}
+          </p>
+        </>
+      ) : (
+        <p>Select a meeting to view details</p>
+      )}
+      <br />
+      <br />
+      <table className="meeting-table">
+        <thead>
+          <tr className="meeting-table tr">
+            <th>ID</th>
+            <th>MEETING TITLE</th>
+            <th>ROOM STATUS</th>
+            <th>DATE & TIME</th>
+            <th>STATUS</th>
+            <th>LICENSE</th>
+            <th>ROOMS AVAIL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fetchError && (
+            <tr>
+              <td colSpan="6" style={{ color: "red" }}>
+                {fetchError}
+              </td>
+            </tr>
           )}
-          <br />
-          <br />
-          <table className="meeting-table">
-            <thead>
-              <tr className="meeting-table tr">
-                <th>ID</th>
-                <th>MEETING TITLE</th>
-                <th>ROOM STATUS</th>
-                <th>DATE & TIME</th>
-                <th>STATUS</th>
-                <th>LICENSE</th>
-                <th>ROOMS AVAIL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fetchError && (
-                <tr>
-                  <td colSpan="6" style={{ color: "red" }}>
-                    {fetchError}
-                  </td>
-                </tr>
-              )}
 
-              {fetchMeetings === null ? (
-                <tr>
-                  <td colSpan="6">Loading...</td>
-                </tr>
-              ) : fetchMeetings.length === 0 ? (
-                <tr>
-                  <td colSpan="6">No meetings yet</td>
-                </tr>
-              ) : (
-                fetchMeetings.map((f) => (
-                  <tr
-                    key={f.id}
-                    onClick={() => setSelectedMeeting(f)}
-                    className={`${f.hasAvailableLicense ? "available" : "unavailable"} tablerow`}
-                   >
-                    <td>{f.id}</td>
-                    <td>{f.title}</td>
-                    <td>{f.want_room ? "Yes" : "No"}</td>
-                    <td>{formatStr(f.start_time)}</td>
-                    <td>{f.status}</td>
-                    <td
-                      style={{
-                        color: f.hasAvailableLicense ? "green" : "red",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {f.licenseInfo}
-                    </td>
-                    <td>
-                      {f.want_room ? (
-                        availableRooms.length > 0 ? (
-                          <span style={{ color: "green", fontWeight: "bold" }}>
-                            {availableRooms.length} available
-                          </span>
-                        ) : (
-                          <span style={{ color: "red", fontWeight: "bold" }}>
-                            No rooms
-                          </span>
-                        )
-                      ) : (
-                        "Not required"
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-      
-      </div>
+          {fetchMeetings === null ? (
+            <tr>
+              <td colSpan="6">Loading...</td>
+            </tr>
+          ) : fetchMeetings.length === 0 ? (
+            <tr>
+              <td colSpan="6">No meetings yet</td>
+            </tr>
+          ) : (
+            fetchMeetings.map((f) => (
+              <tr
+                key={f.id}
+                onClick={() => setSelectedMeeting(f)}
+                className={`${
+                  f.hasAvailableLicense ? "available" : "unavailable"
+                } tablerow`}
+              >
+                <td>{f.id}</td>
+                <td>{f.title}</td>
+                <td>{f.want_room ? "Yes" : "No"}</td>
+                <td>{formatStr(f.start_time)}</td>
+                <td>{f.status}</td>
+                <td
+                  style={{
+                    color: f.hasAvailableLicense ? "green" : "red",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {f.licenseInfo}
+                </td>
+                <td>
+                  {f.want_room ? (
+                    availableRooms.length > 0 ? (
+                      <span style={{ color: "green", fontWeight: "bold" }}>
+                        {availableRooms.length} available
+                      </span>
+                    ) : (
+                      <span style={{ color: "red", fontWeight: "bold" }}>
+                        No rooms
+                      </span>
+                    )
+                  ) : (
+                    "Not required"
+                  )}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-export default tab1;
+export default tab4;

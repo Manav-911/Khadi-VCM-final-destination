@@ -6,19 +6,9 @@ async function resetDatabase() {
     console.log("Connected ✅");
 
     // 1️⃣ Drop the old CHECK constraint
-    await client.query(`
-      ALTER TABLE meetings
-      DROP CONSTRAINT IF EXISTS meetings_status_check;
-    `);
-    console.log("Old CHECK constraint dropped ✅");
+    const res = await client.query(`Delete from meetings;`);
 
-    // 2️⃣ Add a new CHECK constraint including 'completed'
-    await client.query(`
-      ALTER TABLE meetings
-      ADD CONSTRAINT meetings_status_check
-      CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled', 'completed'));
-    `);
-    console.log("New CHECK constraint added with 'completed' ✅");
+    console.log("Meetings deleted:", res.rowCount);
   } catch (err) {
     console.error("Error resetting DB:", err);
   } finally {

@@ -108,7 +108,7 @@ export default function RequestMeetingForm({ open, onClose }) {
       );
       alert("Meeting request submitted!");
       triggerRefresh();
-      
+
       // Reset form and close modal
       setFormData({
         title: "",

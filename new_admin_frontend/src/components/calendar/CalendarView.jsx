@@ -24,7 +24,7 @@ export default function CalendarView() {
           withCredentials: true,
         }
       );
-      setMeetings(meetingsData);
+      setMeetings(meetingsData.data);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch meetings:", err);

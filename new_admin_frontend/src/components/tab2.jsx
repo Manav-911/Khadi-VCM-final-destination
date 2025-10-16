@@ -10,7 +10,7 @@ import CalendarView from "../components/calendar/CalendarView.jsx";
 // import supabase from "../config/supabaseClient.js";
 const URL = "http://localhost:3000";
 
-function tab1() {
+function tab2() {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -87,18 +87,15 @@ function tab1() {
   useEffect(() => {
     const fetchallMeetings = async () => {
       const token = localStorage.getItem("token");
-      const { data, error } = await axios.get(
+      const response = await axios.get(
         "http://localhost:3000/admin/approved-meetings",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (error) {
-        setFetchError("Could not fetch data");
-        setfetchMeetings(null);
-        console.log(error);
-      }
-      if (data) {
-        setfetchMeetings(data);
+      if (response.data) {
+        setfetchMeetings(response.data);
+        console.log(response);
+
         setFetchError(null);
       }
     };
@@ -115,71 +112,63 @@ function tab1() {
 
     fetchallMeetings();
   }, []);
+  const formatStr = (str) =>
+    new Date(str).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    });
+  console.log("selectedMeeting", selectedMeeting);
 
   return (
-    <div className="container">
-      <div className="right-panel-meeting">
-        <div>
-          <h3>MEETING DETAILS</h3>
-          <button
-            className="clear-btn"
-            onClick={() => setSelectedMeeting(null)}
-          >
-            CLEAR
-          </button>
-          {selectedMeeting ? (
-            <>
-              <p>
-                <strong>Meeting ID:</strong> {selectedMeeting.id}
-              </p>
-              <p>
-                <strong>Title:</strong> {selectedMeeting.meeting_title}
-              </p>
-              <p>
-                <strong>Date:</strong> {selectedMeeting.date}
-                <br />
-                {selectedMeeting.time} (IST)
-              </p>
-              <p>
-                <strong>Purpose:</strong>
-                <br />
-                {selectedMeeting.meeting_desc}
-              </p>
-              {/* <p><strong>Email:</strong><br />{selectedMeeting.email}</p> */}
-              <p>
-                <strong>Status:</strong> {selectedMeeting.status}
-              </p>
-              {selectedMeeting.status === "APPROVED" && (
-                <>
-                  <button className="approve-btn" onClick={handleApprove}>
-                    APPROVE
-                  </button>
-                  <button className="decline-btn" onClick={handleDecline}>
-                    DECLINE
-                  </button>
-                </>
-              )}
-            </>
-          ) : (
-            <p>Select a meeting to view details</p>
-          )}
+    <div className="right-panel-meeting">
+      <div>
+        <h3>MEETING DETAILS</h3>
+        <button className="clear-btn" onClick={() => setSelectedMeeting(null)}>
+          CLEAR
+        </button>
+        {selectedMeeting ? (
+          <>
+            <p>
+              <strong>Meeting ID:</strong> {selectedMeeting.id}
+            </p>
+            <p>
+              <strong>Title:</strong> {selectedMeeting.title}
+            </p>
+            <p>
+              <strong>Date and Time:</strong>{" "}
+              {formatStr(selectedMeeting.start_time)}
+              <br />
+            </p>
+            <p>
+              <strong>Purpose:</strong>
+              <br />
+              {selectedMeeting.description}
+            </p>
+            <p>
+              <strong>Status:</strong> {selectedMeeting.status}
+            </p>
+          </>
+        ) : (
+          <p>Select a meeting to view details</p>
+        )}
 
-          <br />
-          <br />
+        <br />
+        <br />
 
-          <table className="meeting-table">
-            <thead>
-              <tr className="meeting-table tr">
-                <th>ID</th>
-                <th>MEETING TITLE</th>
-                {/* <th>DESCRIPTION</th> */}
-                <th>PARTICIPANTS</th>
-                <th>DATE & TIME</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/*{meetings.length === 0 ? (
+        <table className="meeting-table">
+          <thead>
+            <tr className="meeting-table tr">
+              <th>ID</th>
+              <th>MEETING TITLE</th>
+              {/* <th>DESCRIPTION</th> */}
+              <th>PARTICIPANTS</th>
+              <th>DATE & TIME</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/*{meetings.length === 0 ? (
                 <tr>
                   <td colSpan="5">No meetings yet</td>
                 </tr>
@@ -201,53 +190,34 @@ function tab1() {
                 ))
               )}*/}
 
-              {fetchError && <p>{fetchError}</p>}
+            {fetchError && <p>{fetchError}</p>}
 
-              {fetchMeetings === null ? null : fetchMeetings.length === 0 ? (
-                <tr>
-                  <td colSpan="5">No meetings yet</td>
-                </tr>
-              ) : (
-                fetchMeetings.map((f) => (
-                  <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
-                    <td>{f.id}</td>
-                    <td>{f.title}</td>
-                    <td>{f.want_room ? "Yes" : "No"}</td>
-                    <td>
-                      {f.date} {f.start_time}
-                    </td>
-                    <td>
-                      <span className={`status ${f.status?.toLowerCase()}`}>
-                        {f.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* {showPending && (
-        <div className="declined-panel">
-          <div className="declined-header">
-            <h3>❌ Declined Meetings</h3>
-            <button className="close-declined" onClick={() => setPendingMeetings(false)}>Close</button>
-          </div>
-          <ul>
-            {declinedMeetings.length === 0 ? (
-              <li>No pending meetings.</li>
+            {fetchMeetings === null ? null : fetchMeetings.length === 0 ? (
+              <tr>
+                <td colSpan="5">No meetings yet</td>
+              </tr>
             ) : (
-              declinedMeetings.map((m, index) => (
-                <li key={index}>{m.title} by {m.organizer} at {m.time} ({m.date})</li>
+              fetchMeetings.map((f) => (
+                <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
+                  <td>{f.id}</td>
+                  <td>{f.title}</td>
+                  <td>{f.want_room ? "Yes" : "No"}</td>
+                  <td>
+                    {f.date} {f.start_time}
+                  </td>
+                  <td>
+                    <span className={`status ${f.status?.toLowerCase()}`}>
+                      {f.status}
+                    </span>
+                  </td>
+                </tr>
               ))
             )}
-          </ul>
-        </div>
-      )} */}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-export default tab1;
+export default tab2;

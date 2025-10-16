@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Tab1 from "../components/tab1";
 import Tab2 from "../components/tab2";
 import Tab3 from "../components/tab3";
+import Tab4 from "../components/tab4";
 import "../styles/page.css";
 import "../App.css";
 import RequestMeeting from "../components/meeting/RequestMeetingForm.jsx";
@@ -37,7 +38,7 @@ function TabsTemp() {
             </button>
           </div>
         </div>
-        
+
         {/* Conditionally render the overlay only when openPopup is true */}
         {openPopup && (
           <div className="model-overlay">
@@ -47,7 +48,7 @@ function TabsTemp() {
             />
           </div>
         )}
-        
+
         <div className="right-panel">
           <div className="button-group">
             <button
@@ -69,8 +70,8 @@ function TabsTemp() {
               Declined
             </button>
             <button
-              className={action === "Tab3" ? "btn active" : "btn"}
-              onClick={() => setAction("Tab3")}
+              className={action === "Tab4" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab4")}
             >
               Completed
             </button>
@@ -86,9 +87,10 @@ function TabsTemp() {
           {action === "Tab1" ? <Tab1 /> : null}
           {action === "Tab2" ? <Tab2 /> : null}
           {action === "Tab3" ? <Tab3 /> : null}
+          {action === "Tab4" ? <Tab4 /> : null}
         </div>
       </div>
-      <Footer /> 
+      <Footer />
     </div>
   );
 }
@@ -123,24 +125,28 @@ function Tabs() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px',
-        color: '#666'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          fontSize: "18px",
+          color: "#666",
+        }}
+      >
         <div>
           <p>⚠️ Authentication required</p>
-          <p>Please ensure you have a valid token in the URL or localStorage.</p>
-          <button 
-            onClick={() => window.location.href = '/'} 
-            style={{ 
-              marginTop: '20px',
-              padding: '10px 20px',
-              fontSize: '16px',
-              cursor: 'pointer'
+          <p>
+            Please ensure you have a valid token in the URL or localStorage.
+          </p>
+          <button
+            onClick={() => (window.location.href = "/")}
+            style={{
+              marginTop: "20px",
+              padding: "10px 20px",
+              fontSize: "16px",
+              cursor: "pointer",
             }}
           >
             Go to Home
@@ -149,7 +155,7 @@ function Tabs() {
       </div>
     );
   }
-  
+
   return (
     <>
       <TabsTemp />

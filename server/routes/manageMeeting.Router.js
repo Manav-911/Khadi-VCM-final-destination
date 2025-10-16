@@ -14,6 +14,7 @@ const {
   getCancelledMeetings,
   getApprovedMeeting,
   getAvailableLicenses,
+  getCompletedMeetings,
 } = require("../controllers/manageMeeting.controller.js");
 
 const manageMeetingRouter = express.Router();
@@ -58,6 +59,13 @@ manageMeetingRouter.get(
   authenticateToken,
   isAdmin,
   getApprovedMeeting
+);
+
+manageMeetingRouter.get(
+  "/completed-meetings",
+  authenticateToken,
+  isAdmin,
+  getCompletedMeetings
 );
 
 manageMeetingRouter.get(
