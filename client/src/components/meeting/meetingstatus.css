@@ -148,7 +148,7 @@
 
 .status-approved {
   background-color: var(--success-color); /* Green */
-  color: white;
+  color: rgb(255, 255, 255);
 }
 /* Left border color matching the status for emphasis */
 .ums-card.status-approved-card {
@@ -244,7 +244,7 @@
   padding: 0.7rem;
   border-bottom: 1px solid #eaeaea;
 }
-.status-approved { color: #1976d2; font-weight: 600; }
+.status-approved { color: #ffffff; font-weight: 600; }
 .status-pending { color: #fbbf24; font-weight: 600; }
 .status-denied { color: #ef4444; font-weight: 600; }
 .edit-btn {

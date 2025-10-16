@@ -5,6 +5,7 @@ const {
   getOffices,
   getUsersByOffice,
   getUsers,
+  cancelUserMeeting,
 } = require("../controllers/meeting.controller");
 const { authenticateToken } = require("../middleware/authMiddleware.js");
 const supabase = require("../config/db.js");
@@ -24,5 +25,10 @@ meetingRouter.get(
   getUsersByOffice
 );
 meetingRouter.get("/getUsers", authenticateToken, getUsers);
+meetingRouter.delete(
+  "/cancelUserMeeting/:id",
+  authenticateToken,
+  cancelUserMeeting
+);
 
 module.exports = meetingRouter;

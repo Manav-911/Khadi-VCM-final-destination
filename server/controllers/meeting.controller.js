@@ -319,6 +319,53 @@ const getUsers = async (req, res) => {
   }
 };
 
+const cancelUserMeeting = async (req, res) => {
+  const userId = req.user.userId; // user ID from JWT
+  const meetingId = req.params.id; // meeting ID from route params
+
+  try {
+    // 1️⃣ Check if the meeting exists and belongs to the user
+    const result = await pool.query(
+      "SELECT * FROM meetings WHERE id = $1 AND requested_by = $2",
+      [meetingId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Meeting not found or not authorized to cancel.",
+      });
+    }
+
+    const meeting = result.rows[0];
+
+    // 2️⃣ If already completed, don’t allow cancellation
+    if (meeting.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed meetings cannot be cancelled.",
+      });
+    }
+
+    // 3️⃣ Update meeting status to 'cancelled'
+    await pool.query("UPDATE meetings SET status = $1 WHERE id = $2", [
+      "cancelled",
+      meetingId,
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Meeting cancelled successfully.",
+    });
+  } catch (error) {
+    console.error("Error cancelling meeting:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
 module.exports = {
   addMeeting,
   checkLicense,
@@ -327,4 +374,5 @@ module.exports = {
   getOffices,
   getUsersByOffice,
   getUsers,
+  cancelUserMeeting,
 };
