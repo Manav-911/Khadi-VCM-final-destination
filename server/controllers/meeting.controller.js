@@ -372,7 +372,8 @@ const requestMeetingRecording = async (req, res) => {
 
   try {
     // 1. Check if the meeting exists (your existing code)
-    const meetingQuery = "SELECT id FROM meetings WHERE id = $1";
+    const meetingQuery =
+      "SELECT id FROM meetings WHERE id = $1 AND status = 'completed'";
     const meetingResult = await pool.query(meetingQuery, [meetingId]);
 
     if (meetingResult.rows.length === 0) {
@@ -381,42 +382,29 @@ const requestMeetingRecording = async (req, res) => {
         .json({ success: false, message: "Meeting not found" });
     }
 
-    // **NEW**: Check for an existing request to prevent duplicates
-    const existingRequestQuery = `
-      SELECT id FROM meeting_recording_request 
-      WHERE meeting_id = $1 AND requested_by = $2
-    `;
+    const webex_meeting_id = meetingResult.rows[0].webex_meeting_id;
+
+    const existingRequestQuery = `SELECT id FROM meeting_recording_requests WHERE meeting_id = $1 AND requested_by = $2`;
     const existingRequestResult = await pool.query(existingRequestQuery, [
       meetingId,
       userId,
     ]);
 
     if (existingRequestResult.rows.length > 0) {
-      return res
-        .status(409) // 409 Conflict is a good status code for this
-        .json({
-          success: false,
-          message: "You have already requested a recording for this meeting.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Recording request already exists for this meeting",
+      });
     }
 
-    // 2. **NEW**: Insert the recording request into the new table
-    const insertQuery = `
-      INSERT INTO meeting_recording_request (meeting_id, requested_by) 
-      VALUES ($1, $2)
-      RETURNING id, status; 
-    `;
-    // The 'status' column will automatically default to 'pending'
-    const newRequestResult = await pool.query(insertQuery, [meetingId, userId]);
+    // 2. Insert a new recording request
+    const insertQuery = `INSERT INTO meeting_recording_requests (meeting_id, requested_by, status) VALUES ($1, $2, 'pending') RETURNING *`;
+    const insertResult = await pool.query(insertQuery, [meetingId, userId]);
 
-    const newRequest = newRequestResult.rows[0];
-
-    // 3. Send a success response
-    return res.status(201).json({
-      // 201 Created is more appropriate here
+    return res.status(200).json({
       success: true,
-      message: "Recording request submitted successfully.",
-      request: newRequest, // Send back the newly created request info
+      message: "Recording request created successfully",
+      data: insertResult.rows[0],
     });
   } catch (error) {
     console.error("Error creating recording request:", error);

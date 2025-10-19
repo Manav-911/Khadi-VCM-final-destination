@@ -574,28 +574,117 @@ const addMeeting = async (req, res) => {
 
 const acceptMeetingRecordingRequest = async (req, res) => {
   const { request_id } = req.body;
+  const adminId = req.user.userId;
 
   try {
-    const result = await pool.query(
-      `UPDATE meeting_recording_request
-       SET status = 'accepted'
-       WHERE id = $1
-       RETURNING *;`,
-      [request_id]
-    );
+    // 1. Get recording request details
+    const requestQuery = `
+      SELECT 
+        mrr.*,
+        m.webex_meeting_id,
+        m.license,
+        m.title as meeting_title,
+        l.access_token,
+        l.client_id,
+        l.client_secret,
+        l.refresh_token
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN licenses l ON m.license = l.id
+      WHERE mrr.id = $1
+    `;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Request not found" });
+    const requestResult = await pool.query(requestQuery, [request_id]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ message: "Recording request not found" });
     }
 
-    const updatedRequest = result.rows[0];
+    const recordingRequest = requestResult.rows[0];
+
+    // 2. Get access token
+    const accessToken = await getValidAccessToken({
+      id: recordingRequest.license,
+      client_id: recordingRequest.client_id,
+      client_secret: recordingRequest.client_secret,
+      refresh_token: recordingRequest.refresh_token,
+      access_token: recordingRequest.access_token,
+    });
+
+    // 3. Fetch recording from Webex
+    console.log(
+      `Fetching recording for meeting: ${recordingRequest.webex_meeting_id}`
+    );
+
+    const recordingsRes = await axios.get(
+      `https://webexapis.com/v1/recordings?meetingId=${recordingRequest.webex_meeting_id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    // 4. Check if recording exists
+    if (recordingsRes.data.items.length === 0) {
+      return res.status(404).json({
+        message: "Recording not yet available in Webex",
+      });
+    }
+
+    // 5. Get recording URL
+    const recording = recordingsRes.data.items[0];
+    const recordingUrl =
+      recording.downloadUrl || recording.playbackUrl || recording.shareUrl;
+
+    console.log(`Recording found: ${recordingUrl}`);
+
+    // 6. Update request with recording URL
+    const updateResult = await pool.query(
+      `UPDATE meeting_recording_requests
+       SET status = 'completed', 
+           recording_url = $1, 
+       WHERE id = $2
+       RETURNING *;`,
+      [recordingUrl, request_id]
+    );
+
+    const updatedRequest = updateResult.rows[0];
+
+    // 7. Send email to user
+    const userQuery = `SELECT email, name FROM users WHERE id = $1`;
+    const userResult = await pool.query(userQuery, [
+      recordingRequest.requested_by,
+    ]);
+
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      await transporter.sendMail({
+        from: process.env.EMAIL,
+        to: user.email,
+        subject: `Recording Available: ${recordingRequest.meeting_title}`,
+        text: `
+          Your meeting recording is now available!
+          
+          Meeting: ${recordingRequest.meeting_title}
+          Recording URL: ${recordingUrl}
+          
+          You can access the recording using the link above.
+        `,
+      });
+      console.log(`Email sent to ${user.email}`);
+    }
+
     res.json({
-      message: "Recording request accepted",
+      success: true,
+      message: "Recording request completed successfully",
+      recording_url: recordingUrl,
       request: updatedRequest,
     });
   } catch (err) {
     console.error("Error accepting recording request:", err);
-    res.status(500).json({ error: "DB error" });
+    res.status(500).json({
+      error: "Failed to process recording request",
+      details: err.message,
+    });
   }
 };
 
@@ -603,26 +692,110 @@ const rejectMeetingRecordingRequest = async (req, res) => {
   const { request_id } = req.body;
 
   try {
-    const result = await pool.query(
-      `UPDATE meeting_recording_request
-       SET status = 'rejected'
+    // 1. Get the request details including user info for email
+    const requestQuery = `
+      SELECT 
+        mrr.*,
+        m.title as meeting_title,
+        u.email as user_email,
+        u.name as user_name
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN users u ON mrr.requested_by = u.id
+      WHERE mrr.id = $1
+    `;
+
+    const requestResult = await pool.query(requestQuery, [request_id]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const recordingRequest = requestResult.rows[0];
+
+    // 2. Update the request status to rejected
+    const updateResult = await pool.query(
+      `UPDATE meeting_recording_requests
+       SET status = 'rejected',
        WHERE id = $1
        RETURNING *;`,
       [request_id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Request not found" });
+    const updatedRequest = updateResult.rows[0];
+
+    // 3. Send rejection email to the user
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL,
+        to: recordingRequest.user_email,
+        subject: `Recording Request Rejected: ${recordingRequest.meeting_title}`,
+        text: `
+          Your recording request has been rejected.
+          
+          Meeting: ${recordingRequest.meeting_title}
+          Request ID: ${request_id}
+          
+          If you believe this was a mistake, please contact your administrator.
+        `,
+      });
+      console.log(`✅ Rejection email sent to ${recordingRequest.user_email}`);
+    } catch (emailError) {
+      console.error("Failed to send rejection email:", emailError);
+      // Continue even if email fails
     }
 
-    const updatedRequest = result.rows[0];
     res.json({
-      message: "Recording request rejected",
+      success: true,
+      message: "Recording request rejected successfully",
       request: updatedRequest,
     });
   } catch (err) {
     console.error("Error rejecting recording request:", err);
-    res.status(500).json({ error: "DB error" });
+    res.status(500).json({
+      success: false,
+      error: "Database error",
+    });
+  }
+};
+
+const getRecordingRequestsByStatus = async (req, res) => {
+  const adminOfficeId = req.user.officeId;
+  const { status } = req.params; // 'pending', 'approved', 'completed', 'rejected'
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        mrr.id as request_id,
+        mrr.meeting_id,
+        mrr.requested_at,
+        mrr.status,
+        mrr.recording_url,
+        m.title as meeting_title,
+        m.start_time,
+        m.duration_minutes,
+        u.name as requester_name,
+        u.email as requester_email,
+        u.department as requester_department
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN users u ON mrr.requested_by = u.id
+      WHERE u.office = $1 AND mrr.status = $2
+      ORDER BY mrr.requested_at DESC
+    `,
+      [adminOfficeId, status]
+    );
+
+    res.json({
+      success: true,
+      status: status,
+      count: result.rows.length,
+      requests: result.rows,
+    });
+  } catch (err) {
+    console.error("Error fetching recording requests by status:", err);
+    res.status(500).json({ error: "Database error" });
   }
 };
 
@@ -692,4 +865,7 @@ module.exports = {
   approveMeeting,
   rejectMeeting,
   addMeeting,
+  acceptMeetingRecordingRequest,
+  rejectMeetingRecordingRequest,
+  getRecordingRequestsByStatus,
 };

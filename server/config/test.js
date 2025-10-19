@@ -71,20 +71,31 @@ const app = express();
 //   console.log("OAuth callback server running at http://localhost:5000");
 //   console.log("Open your Webex OAuth URL in a browser to authorize.");
 // });
-async function fixWebexMeetingIdColumn() {
+async function createMeetingAttendanceTable() {
   const client = await pool.connect();
   try {
     await client.query(`
-      ALTER TABLE meetings 
-      ALTER COLUMN webex_meeting_id TYPE VARCHAR(100);
+      CREATE TABLE IF NOT EXISTS meeting_attendance (
+        id SERIAL PRIMARY KEY,
+        meeting_id INTEGER UNIQUE REFERENCES meetings(id) ON DELETE CASCADE,
+        webex_meeting_id VARCHAR(100),
+        attendance_data JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
-    console.log("✅ Fixed webex_meeting_id column type to VARCHAR(100)");
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_meeting_attendance_meeting 
+      ON meeting_attendance(meeting_id);
+    `);
+
+    console.log("✅ Table created: meeting_attendance");
   } catch (error) {
-    console.error("❌ Error fixing column:", error);
+    console.error("❌ Error creating table:", error);
   } finally {
     client.release();
   }
 }
 
 // Run the migration
-fixWebexMeetingIdColumn();
+createMeetingAttendanceTable();
