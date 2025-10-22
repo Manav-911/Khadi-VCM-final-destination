@@ -592,12 +592,12 @@ tr:hover {
 }
 
 .meeting-table{
-  background-color: rgb(182, 182, 182);
+  background-color: rgb(193, 193, 193);
   overflow: auto;
 }
 .tablerow{
-  background: white;
-  color: rgb(79, 79, 79);
+  background: rgb(255, 255, 255);
+  color: rgb(0, 0, 0);
 }
 .left-btn {
   position: absolute;

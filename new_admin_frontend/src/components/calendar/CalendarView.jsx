@@ -16,7 +16,7 @@ export default function CalendarView() {
     try {
       setLoading(true);
       const meetingsData = await axios.get(
-        "http://localhost:3000/meeting/approved_meetings",
+        "http://localhost:3000/admin/approved-meetings",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -24,6 +24,8 @@ export default function CalendarView() {
           withCredentials: true,
         }
       );
+      console.log("hello", meetingsData);
+
       setMeetings(meetingsData.data);
       setError(null);
     } catch (err) {
@@ -82,7 +84,17 @@ export default function CalendarView() {
       <FullCalendar
         plugins={[timeGridPlugin]}
         initialView="timeGridWeek"
-        events={meetings}
+        events={meetings.map((m) => ({
+          id: m.id,
+          title: m.title,
+          start: m.start_time, // FullCalendar understands "start"
+          end: new Date(
+            new Date(m.start_time).getTime() + m.duration_minutes * 60000
+          ).toISOString(),
+          description: m.description,
+          status: m.status,
+          requested_by_name: m.requested_by_name,
+        }))}
         height="auto"
         slotMinTime="00:00:00"
         slotMaxTime="24:00:00"

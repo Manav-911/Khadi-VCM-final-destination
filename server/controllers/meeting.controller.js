@@ -122,7 +122,8 @@ const addMeeting = async (req, res) => {
   const userId = req.user.userId;
   const officeId = req.user.officeId;
 
-  console.log(typeof officeId);
+  console.log("Received officeId type:", typeof officeId);
+  console.log("Raw start_time from frontend:", req.body.start_time);
 
   const {
     title,
@@ -133,11 +134,23 @@ const addMeeting = async (req, res) => {
     participants,
   } = req.body;
 
+  console.log("Participants: ", participants);
+
+  // Parse the ISO string - this automatically handles timezone conversion
   const newStartTime = new Date(start_time);
-  console.log(newStartTime);
+  console.log("Parsed start_time (local server time):", newStartTime);
+  console.log("Parsed start_time (ISO):", newStartTime.toISOString());
+  console.log("Parsed start_time (UTC):", newStartTime.toUTCString());
 
   const endTime = new Date(newStartTime.getTime() + duration_minutes * 60000);
-  console.log(endTime);
+  console.log("Calculated end_time:", endTime);
+  console.log("Calculated end_time (ISO):", endTime.toISOString());
+
+  // Convert to IST for logging/debugging
+  const istStartTime = newStartTime.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
+  console.log("Start time in IST:", istStartTime);
 
   const licenseBusy = await checkLicense(officeId, newStartTime, endTime);
   if (licenseBusy) {
@@ -157,8 +170,7 @@ const addMeeting = async (req, res) => {
     }
   }
 
-  // If all checks passed, save request in pending state
-  // 1. Insert the meeting request
+  // Store the UTC time in database
   const insertRes = await pool.query(
     `INSERT INTO meetings
    (title, description, start_time, duration_minutes, requested_by, status, conference_room_id, license, link, want_room)
@@ -168,7 +180,6 @@ const addMeeting = async (req, res) => {
   );
 
   const insertedMeeting = insertRes.rows[0];
-
   const meetingId = insertedMeeting.id;
 
   let participantIds = [];
@@ -177,23 +188,64 @@ const addMeeting = async (req, res) => {
     participantIds = participants
       .map((id) => Number(id))
       .filter((id) => !isNaN(id));
+  } else if (participants && Array.isArray(participants.individuals)) {
+    participantIds = participants.individuals
+      .map((id) => Number(id))
+      .filter((id) => !isNaN(id));
+  } else if (typeof participants === "string") {
+    try {
+      const parsed = JSON.parse(participants);
+      if (Array.isArray(parsed)) {
+        participantIds = parsed
+          .map((id) => Number(id))
+          .filter((id) => !isNaN(id));
+      }
+    } catch (err) {
+      console.error("❌ Error parsing participants string:", err.message);
+    }
   }
 
-  const participantRows = participantIds.map((user_id) => ({
-    meeting_id: meetingId,
-    user_id,
-  }));
+  console.log("👥 Processed participant IDs:", participantIds);
+  console.log("👥 Participant IDs length:", participantIds.length);
 
-  if (participantRows.length > 0) {
-    const values = participantRows
-      .map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`)
-      .join(",");
-    const flat = participantRows.flatMap((p) => [p.meeting_id, p.user_id]);
+  // FIX: Simple and clear participant insertion
+  if (participantIds.length > 0) {
+    console.log("🎯 STARTING participant insertion...");
 
-    await pool.query(
-      `INSERT INTO meeting_participants (meeting_id, user_id) VALUES ${values}`,
-      flat
-    );
+    try {
+      // Method 1: Simple loop with individual inserts
+      for (let i = 0; i < participantIds.length; i++) {
+        const user_id = participantIds[i];
+        console.log(
+          `📝 Inserting participant ${i + 1}/${
+            participantIds.length
+          }: user_id ${user_id} for meeting ${meetingId}`
+        );
+
+        await pool.query(
+          `INSERT INTO meeting_participants (meeting_id, user_id) VALUES ($1, $2)`,
+          [meetingId, user_id]
+        );
+
+        console.log(`✅ Successfully added participant: user_id ${user_id}`);
+      }
+
+      console.log(
+        `🎉 ALL participants added successfully! Total: ${participantIds.length}`
+      );
+    } catch (error) {
+      console.error("💥 ERROR in participant insertion:", error);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+      });
+
+      // Don't fail the whole request if participants fail?
+      // Or you might want to rollback the meeting insertion
+    }
+  } else {
+    console.log("ℹ️ No participants to add");
   }
 
   return res.status(200).json({
@@ -324,45 +376,185 @@ const cancelUserMeeting = async (req, res) => {
   const meetingId = req.params.id; // meeting ID from route params
 
   try {
-    // 1️⃣ Check if the meeting exists and belongs to the user
-    const result = await pool.query(
-      "SELECT * FROM meetings WHERE id = $1 AND requested_by = $2",
+    const meetingRes = await pool.query(
+      `
+      SELECT m.*, u.email as requester_email, u.name as requester_name
+      FROM meetings m
+      JOIN users u ON m.requested_by = u.id
+      WHERE m.id = $1 AND m.requested_by = $2
+    `,
       [meetingId, userId]
     );
 
-    if (result.rows.length === 0) {
+    if (meetingRes.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Meeting not found or not authorized to cancel.",
+        message:
+          "Meeting not found or you dont have permission to cancel this meeting.",
       });
     }
 
-    const meeting = result.rows[0];
+    const meeting = meetingRes.rows[0];
 
-    // 2️⃣ If already completed, don’t allow cancellation
-    if (meeting.status === "completed") {
+    if (meeting.status === "cancelled" || meeting.status === "completed") {
       return res.status(400).json({
         success: false,
-        message: "Completed meetings cannot be cancelled.",
+        message: "Meeting is completed or cancelled",
       });
     }
 
-    // 3️⃣ Update meeting status to 'cancelled'
-    await pool.query("UPDATE meetings SET status = $1 WHERE id = $2", [
-      "cancelled",
+    if (meeting.status === "approved" && meeting.webex_meeting_id) {
+      await cancelWebexMeeting(meeting);
+    }
+
+    await pool.query(`UPDATE meeting SET status = 'cancelled' WHERE id = $1`, [
       meetingId,
     ]);
 
-    return res.status(200).json({
+    await notifyAdminAboutCancellation(meeting);
+
+    await notifyParticipantsAboutCancellation(meetingId, meeting);
+
+    console.log(`Meeting cancelled ${meetingId}`);
+
+    res.json({
       success: true,
-      message: "Meeting cancelled successfully.",
+      message: "Meeting cancelled successfully",
+      meeting_id: meetingId,
     });
   } catch (error) {
-    console.error("Error cancelling meeting:", error);
+    console.error("Error cancelling meeting:", err);
     res.status(500).json({
       success: false,
-      message: "Internal server error.",
+      error: "Failed to cancel meeting",
     });
+  }
+};
+const cancelWebexMeeting = async (meeting) => {
+  try {
+    // Get license details for access token
+    const licenseRes = await pool.query(
+      `
+      SELECT l.* FROM licenses l 
+      WHERE l.id = $1
+    `,
+      [meeting.license]
+    );
+
+    if (licenseRes.rows.length === 0) {
+      console.log("❌ License not found for Webex cancellation");
+      return;
+    }
+
+    const license = licenseRes.rows[0];
+    const accessToken = await getValidAccessToken(license);
+
+    // Delete meeting from Webex
+    await axios.delete(
+      `https://webexapis.com/v1/meetings/${meeting.webex_meeting_id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    console.log(`✅ Webex meeting ${meeting.webex_meeting_id} deleted`);
+  } catch (err) {
+    console.error(
+      "❌ Error cancelling Webex meeting:",
+      err.response?.data || err.message
+    );
+    // Don't fail the entire cancellation if Webex fails
+  }
+};
+
+const notifyAdminAboutCancellation = async (meeting) => {
+  try {
+    // Get admin emails from the same office
+    const adminsRes = await pool.query(
+      `
+      SELECT email, name FROM admin 
+      WHERE office = $1 
+    `,
+      [meeting.office]
+    );
+
+    const adminEmails = adminsRes.rows.map((admin) => admin.email);
+
+    if (adminEmails.length === 0) return;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: adminEmails,
+      subject: `Meeting Cancelled: ${meeting.title}`,
+      html: `
+        <h2>Meeting Cancelled</h2>
+        <p><strong>Meeting:</strong> ${meeting.title}</p>
+        <p><strong>Cancelled by:</strong> ${meeting.requester_name} (${
+        meeting.requester_email
+      })</p>
+        <p><strong>Original Time:</strong> ${new Date(
+          meeting.start_time
+        ).toLocaleString()}</p>
+        <p><strong>Duration:</strong> ${meeting.duration_minutes} minutes</p>
+        ${
+          meeting.webex_meeting_id
+            ? `<p><strong>Webex Meeting ID:</strong> ${meeting.webex_meeting_id}</p>`
+            : ""
+        }
+      `,
+    });
+
+    console.log(
+      `✅ Admin notification sent for cancelled meeting ${meeting.id}`
+    );
+  } catch (emailError) {
+    console.error("Failed to send admin notification:", emailError);
+  }
+};
+const notifyParticipantsAboutCancellation = async (meetingId, meeting) => {
+  try {
+    const participantsRes = await pool.query(
+      `
+      SELECT u.email, u.name 
+      FROM meeting_participants mp
+      JOIN users u ON mp.user_id = u.id
+      WHERE mp.meeting_id = $1
+    `,
+      [meetingId]
+    );
+
+    const participantEmails = participantsRes.rows.map((p) => p.email);
+
+    // Include requester if not already in list
+    if (!participantEmails.includes(meeting.requester_email)) {
+      participantEmails.push(meeting.requester_email);
+    }
+
+    if (participantEmails.length === 0) return;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: participantEmails,
+      subject: `Meeting Cancelled: ${meeting.title}`,
+      html: `
+        <h2>Meeting Cancelled</h2>
+        <p>The following meeting has been cancelled:</p>
+        <p><strong>Title:</strong> ${meeting.title}</p>
+        <p><strong>Time:</strong> ${new Date(
+          meeting.start_time
+        ).toLocaleString()}</p>
+        <p><strong>Duration:</strong> ${meeting.duration_minutes} minutes</p>
+        <p>Please update your calendar accordingly.</p>
+      `,
+    });
+
+    console.log(
+      `✅ Participant notifications sent for cancelled meeting ${meetingId}`
+    );
+  } catch (emailError) {
+    console.error("Failed to send participant notifications:", emailError);
   }
 };
 
@@ -424,4 +616,5 @@ module.exports = {
   getUsersByOffice,
   getUsers,
   cancelUserMeeting,
+  requestMeetingRecording,
 };

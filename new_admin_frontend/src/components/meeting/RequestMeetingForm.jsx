@@ -94,7 +94,10 @@ export default function RequestMeetingForm({ open, onClose }) {
         parseInt(formData.durationMinutes || 0),
       want_room: formData.wantsConferenceRoom,
       status: "pending",
-      participants: formData.participants,
+      participants: {
+        individuals: formData.participants.individuals || [],
+        offices: formData.participants.offices || [],
+      },
     };
 
     try {

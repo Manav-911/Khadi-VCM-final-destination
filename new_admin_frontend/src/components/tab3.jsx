@@ -22,79 +22,7 @@ function tab3() {
   const [showApproved, setShowApproved] = useState(false);
   const [showDeclined, setShowDeclined] = useState(false);
   const [showPending, setShowPending] = useState(false);
-  // ✅ Needed for navigation
 
-  const handleApprove = async () => {
-    if (!selectedMeeting) {
-      console.error("No meeting selected");
-      return;
-    }
-
-    try {
-      await axios.post(`${URL}/api/meetings/approve`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "APPROVED",
-        approvedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setApprovedMeetings([...approvedMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error approving meeting:", err);
-    }
-  };
-
-  const handleDecline = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axios.post(`${URL}/api/meetings/decline`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "DECLINED",
-        declinedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setDeclinedMeetings([...declinedMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error declining meeting:", err);
-    }
-  };
-
-  const handlePending = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axios.post(`${URL}/api/meetings/pending`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "PENDING",
-        pendingAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setPendingMeetings([...pendingMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error pending meeting:", err);
-    }
-  };
-  //useEffect(() => {
-  // const fetchMeetings = async () => {
-  //   console.log("📡 Fetching from:", `${URL}/api/request/decline`);
-  //   try {
-  //     const response = await axios.get(`${URL}/api/meetings/request/decline`);
-  //     console.log("✅ Meetings fetched:", response.data);
-  //     setMeetings(response.data);
-  //   } catch (error) {
-  //     console.error("❌ Error fetching meetings:", error);
-  //   }
-  // };
   useEffect(() => {
     const fetchallMeetings = async () => {
       try {
@@ -131,17 +59,17 @@ function tab3() {
               <strong>Meeting ID:</strong> {selectedMeeting.id}
             </p>
             <p>
-              <strong>Title:</strong> {selectedMeeting.meeting_title}
+              <strong>Title:</strong> {selectedMeeting.title}
             </p>
             <p>
-              <strong>Date:</strong> {selectedMeeting.date}
+              <strong>Date:</strong> {selectedMeeting.start_time}
               <br />
               {selectedMeeting.time} (IST)
             </p>
             <p>
               <strong>Purpose:</strong>
               <br />
-              {selectedMeeting.meeting_desc}
+              {selectedMeeting.description}
             </p>
             {/* <p><strong>Email:</strong><br />{selectedMeeting.email}</p> */}
             <p>

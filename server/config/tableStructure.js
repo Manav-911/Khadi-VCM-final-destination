@@ -89,5 +89,5 @@ const getCompleteTableInfo = async (tableName) => {
 };
 
 // Usage
-getCompleteTableInfo("meeting_recording_requests");
+getCompleteTableInfo("meeting_attendance");
 //listAllTables();

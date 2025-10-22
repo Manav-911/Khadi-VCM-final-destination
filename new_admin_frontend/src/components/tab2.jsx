@@ -23,67 +23,6 @@ function tab2() {
   const [showDeclined, setShowDeclined] = useState(false);
   const [showPending, setShowPending] = useState(false);
   // ✅ Needed for navigation
-
-  const handleApprove = async () => {
-    if (!selectedMeeting) {
-      console.error("No meeting selected");
-      return;
-    }
-
-    try {
-      await axios.post(`${URL}/api/meetings/approve`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "APPROVED",
-        approvedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setApprovedMeetings([...approvedMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error approving meeting:", err);
-    }
-  };
-
-  const handleDecline = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axios.post(`${URL}/api/meetings/decline`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "DECLINED",
-        declinedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setDeclinedMeetings([...declinedMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error declining meeting:", err);
-    }
-  };
-
-  const handlePending = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axios.post(`${URL}/api/meetings/pending`, {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "PENDING",
-        pendingAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setPendingMeetings([...pendingMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error pending meeting:", err);
-    }
-  };
   useEffect(() => {
     const fetchallMeetings = async () => {
       const token = localStorage.getItem("token");
@@ -99,16 +38,6 @@ function tab2() {
         setFetchError(null);
       }
     };
-    // const fetchMeetings = async () => {
-    //   console.log("📡 Fetching from:", `${URL}/api/request/approve`);
-    //   try {
-    //     const response = await axios.get(`${URL}/api/meetings/request/approve`);
-    //     console.log("✅ Meetings fetched:", response.data);
-    //     setMeetings(response.data);
-    //   } catch (error) {
-    //     console.error("❌ Error fetching meetings:", error);
-    //   }
-    // };
 
     fetchallMeetings();
   }, []);

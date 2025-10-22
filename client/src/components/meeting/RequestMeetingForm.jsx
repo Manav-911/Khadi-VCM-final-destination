@@ -72,29 +72,33 @@ export default function RequestMeetingForm() {
       return;
     }
 
-    const startDateTime = new Date(date);
+    // Step 1: Create date with user's IST time
+    const userISTDate = new Date(date);
     const hour24 = (hour % 12) + (isPM && hour !== 12 ? 12 : 0);
-    startDateTime.setHours(hour24);
-    startDateTime.setMinutes(minute);
-    startDateTime.setSeconds(0);
-    startDateTime.setMilliseconds(0);
+    userISTDate.setHours(hour24, minute, 0, 0);
 
-    const formattedDateTime = `${startDateTime.getFullYear()}-${pad(
-      startDateTime.getMonth() + 1
-    )}-${pad(startDateTime.getDate())}T${pad(startDateTime.getHours())}:${pad(
-      startDateTime.getMinutes()
-    )}:${pad(startDateTime.getSeconds())}`;
+    const utcDate = userISTDate;
+
+    console.log("🕐 TIME CONVERSION:");
+    console.log(
+      "User entered:",
+      `${hour}:${minute.toString().padStart(2, "0")} ${formData.amPm} IST`
+    );
+    console.log("As UTC for DB:", utcDate.toISOString());
+    console.log("Will display as:", userISTDate.toLocaleString("en-IN"));
+
+    const allparticipants = [...(formData.participants.individuals || [])];
 
     const payload = {
       title: formData.title,
       description: formData.description,
-      start_time: formattedDateTime,
+      start_time: utcDate.toISOString(), // Store as UTC
       duration_minutes:
         parseInt(formData.durationHours || 0) * 60 +
         parseInt(formData.durationMinutes || 0),
       want_room: formData.wantsConferenceRoom,
       status: "pending",
-      participants: formData.participants,
+      participants: allparticipants,
     };
 
     try {

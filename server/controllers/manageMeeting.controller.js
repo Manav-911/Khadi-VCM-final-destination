@@ -6,6 +6,7 @@ const dotenv = require("dotenv");
 const crypto = require("crypto");
 const { get } = require("http");
 const axios = require("axios");
+const { resolve } = require("path");
 dotenv.config();
 
 const formatLocal = (d) => {
@@ -30,13 +31,35 @@ const transporter = nodemailer.createTransport({
 console.log(process.env.EMAIL);
 console.log(process.env.PASSWORD);
 
+const updateRejectedMeetings = async () => {
+  const now = new Date();
+  try {
+    const result = await pool.query(
+      `UPDATE meetings
+       SET status = 'rejected'
+       WHERE status = 'pending'
+       AND start_time < $1
+       RETURNING id, title, start_time, requested_by;`,
+      [now]
+    );
+
+    if (result.rowCount > 0) {
+      console.log("Auto-rejected overdue pending meetings:", result.rows);
+    }
+
+    console.log(`Auto-rejected ${result.rowCount} overdue pending meetings`);
+  } catch (err) {
+    console.error("updateRejectedMeetings error:", err);
+  }
+};
+
 const updateCompletedMeetings = async () => {
   const now = new Date();
   try {
     const result = await pool.query(
       `UPDATE meetings
        SET status = 'completed'
-       WHERE status IN ('approved', 'pending')
+       WHERE status IN ('approved')
        AND (start_time + (duration_minutes * interval '1 minute')) < $1
        RETURNING id;`,
       [now]
@@ -45,9 +68,139 @@ const updateCompletedMeetings = async () => {
     if (result.rowCount > 0) {
       console.log("Completed meetings updated:", result.rows);
     }
+
+    for (const meeting of result.rows) {
+      await autoFetchAttendence(meeting.id);
+    }
+    await autoFetchMissingAttendence();
+    await updateRejectedMeetings();
+
+    await deleteOldAttendance();
     console.log(`Updated ${result.rowCount} meetings to 'completed'`);
   } catch (err) {
     console.error("updateCompletedMeetings error:", err);
+  }
+};
+
+const autoFetchAttendence = async (meetingId) => {
+  console.log(`🔍 IN autofetchAtt for meeting: ${meetingId}`);
+
+  try {
+    // Check if attendance already exists
+    const existing = await pool.query(
+      `SELECT id FROM meeting_attendance WHERE meeting_id = $1`,
+      [meetingId]
+    );
+
+    if (existing.rows.length > 0) {
+      console.log(
+        `⏩ Attendance already exists for meeting ${meetingId}, skipping...`
+      );
+      return;
+    }
+
+    // Get meeting details with license
+    const meeting = await pool.query(
+      `SELECT m.*, l.access_token, l.refresh_token, l.token_expiry
+       FROM meetings m
+       JOIN licenses l ON m.license = l.id
+       WHERE m.id = $1`,
+      [meetingId]
+    );
+
+    if (meeting.rows.length === 0) {
+      console.log(`❌ No meeting found with ID: ${meetingId}`);
+      return;
+    }
+
+    const meetingData = meeting.rows[0];
+    console.log(`📋 Meeting found:`, {
+      id: meetingData.id,
+      title: meetingData.title,
+      webex_meeting_id: meetingData.webex_meeting_id,
+      status: meetingData.status,
+    });
+
+    // Check if webex_meeting_id exists
+    if (!meetingData.webex_meeting_id) {
+      console.log(`❌ No webex_meeting_id for meeting ${meetingId}`);
+      return;
+    }
+
+    const accessToken = await getValidAccessToken(meetingData);
+    console.log(`🔑 Access token obtained: ${accessToken ? "Yes" : "No"}`);
+
+    // Fetch participants from Webex
+    console.log(
+      `🌐 Calling Webex API for meeting: ${meetingData.webex_meeting_id}`
+    );
+
+    const response = await axios.get(
+      `https://webexapis.com/v1/meetingParticipants?meetingId=${meetingData.webex_meeting_id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    console.log(`✅ Webex API Response Status: ${response.status}`);
+    console.log(`📊 Participants data:`, {
+      itemCount: response.data.items?.length,
+      hasData: !!response.data.items,
+    });
+
+    // Save to database
+    await pool.query(
+      `INSERT INTO meeting_attendance (meeting_id, webex_meeting_id, attendance_data)
+       VALUES ($1, $2, $3)`,
+      [meetingId, meetingData.webex_meeting_id, JSON.stringify(response.data)]
+    );
+
+    console.log(`✅ Auto-saved attendance for meeting ${meetingId}`);
+  } catch (error) {
+    console.error(`❌ Auto-attendance failed for ${meetingId}:`, {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+  }
+};
+
+const autoFetchMissingAttendence = async () => {
+  console.log("In missing aTT");
+
+  try {
+    const missing = await pool.query(
+      `SELECT m.id FROM meetings m WHERE m.status = 'completed' AND NOT EXISTS (SELECT 1 FROM meeting_attendance ma WHERE ma.meeting_id = m.id) `
+    );
+
+    for (const row of missing.rows) {
+      await autoFetchAttendence(row.id);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  } catch (error) {
+    console.error("ERROR in auto- fetch missing attendence: ", error.message);
+  }
+};
+
+const deleteOldAttendance = async () => {
+  try {
+    const result = await pool.query(
+      `DELETE FROM meeting_attendance WHERE created_at < NOW() - INTERVAL '16 days'`
+    );
+
+    if (result.rowCount > 0) {
+      console.log(
+        `DELETED meeting attendance ${result.rowCount} old attendance records (16+days)`
+      );
+    } else {
+      console.log("No old attendance");
+    }
+  } catch (error) {
+    console.error("ERROR in deleting attendance :", err);
   }
 };
 
@@ -56,7 +209,6 @@ const getPendingRequests = async (req, res) => {
   console.log(officeId);
 
   try {
-    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,
               m.status, m.description,
@@ -119,7 +271,6 @@ const getCancelledMeetings = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
-    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room, m.description, m.status,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
@@ -142,18 +293,20 @@ const getApprovedMeeting = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
-    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room,m.description,m.status,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
        FROM meetings m
        JOIN users u ON m.requested_by = u.id
-       WHERE m.status = 'approved'`
+       
+       `
     );
 
     const filtered = result.rows.filter(
       (m) => m.requested_by_office === officeId
     );
+    console.log(filtered);
+
     res.json(filtered);
   } catch (err) {
     console.error("getApprovedMeeting error:", err);
@@ -165,19 +318,27 @@ const getCompletedMeetings = async (req, res) => {
   const officeId = req.user.officeId;
 
   try {
-    updateCompletedMeetings();
     const result = await pool.query(
       `SELECT m.id, m.title, m.start_time, m.duration_minutes, m.want_room, m.description, m.status,
               u.id AS requested_by_id, u.name AS requested_by_name, u.office AS requested_by_office
        FROM meetings m
        JOIN users u ON m.requested_by = u.id
-       WHERE m.status = 'completed'`
+       WHERE m.status = 'completed' 
+       AND u.office = $1
+       AND m.start_time >= CURRENT_DATE - INTERVAL '15  days'`,
+      [officeId]
     );
 
     const filtered = result.rows.filter(
       (m) => m.requested_by_office === officeId
     );
-    res.json(filtered);
+
+    const meetingsWithColors = filtered.map((meeting) => ({
+      ...meeting,
+      backgroundColor: getStatusColor(meeting.status),
+      borderColor: getStatusColor(meeting.status, true),
+    }));
+    res.json(meetingsWithColors);
   } catch (err) {
     console.error("getCompletedMeetings error:", err);
     res.status(500).json({ error: "DB error" });
@@ -188,7 +349,6 @@ const getAvailableRooms = async (req, res) => {
   const { meeting_id } = req.query;
 
   try {
-    updateCompletedMeetings();
     const meetingRes = await pool.query(
       `SELECT m.start_time, m.duration_minutes, u.office
        FROM meetings m
@@ -286,28 +446,28 @@ const approveMeeting = async (req, res) => {
   const { meeting_id } = req.body;
 
   try {
-    updateCompletedMeetings();
     const meetingRes = await pool.query(
       `SELECT 
-      m.id,
-      m.title,
-      m.start_time,
-      m.duration_minutes,
-      m.want_room,
-      u.office,
-      m.description,
-      m.status,
-      u.email AS requester_email
-   FROM meetings m
-   JOIN users u ON m.requested_by = u.id
-   WHERE m.id = $1`,
+        m.id,
+        m.title,
+        m.start_time,
+        m.duration_minutes,
+        m.want_room,
+        u.office,
+        m.description,
+        m.status,
+        u.email AS requester_email
+      FROM meetings m
+      JOIN users u ON m.requested_by = u.id
+      WHERE m.id = $1`,
       [meeting_id]
     );
+
     if (meetingRes.rows.length === 0)
       return res.status(404).json({ message: "Meeting not found" });
 
     const meeting = meetingRes.rows[0];
-    console.log("meeting", meetingRes.rows);
+    console.log("📅 Meeting details:", meeting);
 
     const officeId = meeting.office;
     const start = new Date(meeting.start_time);
@@ -318,6 +478,7 @@ const approveMeeting = async (req, res) => {
       `SELECT id FROM licenses WHERE office_id = $1`,
       [officeId]
     );
+
     if (licenseRes.rows.length === 0)
       return res
         .status(400)
@@ -341,10 +502,120 @@ const approveMeeting = async (req, res) => {
     const availableLicense = licenseRes.rows.find(
       (l) => !busyLicenses.has(l.id)
     );
+
     if (!availableLicense)
       return res.status(400).json({ message: "No license available" });
 
-    // find room if needed
+    // Get full license details including tokens
+    const licenseDetails = await pool.query(
+      `SELECT * FROM licenses WHERE id = $1`,
+      [availableLicense.id]
+    );
+
+    if (licenseDetails.rows.length === 0)
+      return res.status(400).json({ message: "License details not found" });
+
+    const license = licenseDetails.rows[0];
+    console.log("🔑 License details:", {
+      account: license.account,
+      has_access_token: !!license.access_token,
+      has_refresh_token: !!license.refresh_token,
+    });
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(license);
+    console.log("✅ Access token:", accessToken ? "Present" : "Missing");
+
+    if (!accessToken) {
+      return res.status(500).json({ message: "Failed to get access token" });
+    }
+
+    // Convert UTC from DB to IST
+    const convertUTCtoIST = (utcDate) => {
+      const istDate = new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000);
+      return istDate.toISOString().replace("Z", "");
+    };
+
+    const startDate = new Date(meeting.start_time);
+    const endDate = new Date(
+      startDate.getTime() + meeting.duration_minutes * 60000
+    );
+
+    const startISO = convertUTCtoIST(startDate);
+    const endISO = convertUTCtoIST(endDate);
+
+    console.log("🕐 Time Conversion:", {
+      from_db_utc: meeting.start_time,
+      to_webex_ist: startISO,
+      human_readable: new Date(meeting.start_time).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      }),
+    });
+    const participantsRes = await pool.query(
+      `
+  SELECT 
+    u.email AS email
+  FROM meeting_participants mp
+  JOIN users u ON mp.user_id = u.id
+  WHERE mp.meeting_id = $1
+`,
+      [meeting_id]
+    );
+
+    const participantsEmails = participantsRes.rows.map((r) => r.email);
+
+    const webexMeetingData = {
+      title: meeting.title.substring(0, 128),
+      start: startISO,
+      end: endISO,
+      timezone: "Asia/Kolkata",
+      agenda: (meeting.description || "Meeting created by system").substring(
+        0,
+        1300
+      ),
+      invitees: participantsEmails.map((email) => ({ email })),
+      hostEmail: license.account,
+      enabledJoinBeforeHost: true,
+      joinBeforeHostMinutes: 15,
+      waitingRoom: false,
+      allowAnyUserToBeCoHost: true,
+    };
+
+    console.log("📤 Webex API Request Data:", {
+      title_length: webexMeetingData.title.length,
+      agenda_length: webexMeetingData.agenda.length,
+      start: webexMeetingData.start,
+      end: webexMeetingData.end,
+      data: webexMeetingData,
+    });
+
+    // Create Webex meeting
+    console.log("🔄 Creating Webex meeting...");
+
+    const webexMeetingRes = await axios.post(
+      "https://webexapis.com/v1/meetings",
+      webexMeetingData,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+      }
+    );
+
+    console.log("✅ Webex API Response:", {
+      status: webexMeetingRes.status,
+      meeting_id: webexMeetingRes.data.id,
+      webLink: webexMeetingRes.data.webLink,
+    });
+
+    const meeting_link = webexMeetingRes.data.webLink;
+    const webexMeetingId = webexMeetingRes.data.id;
+
+    await checkWebexInvitees(webexMeetingId, accessToken);
+
+    // find room if needed (moved after Webex creation so we don't hold resources if Webex fails)
     let assignedRoom = null;
     if (meeting.want_room) {
       const roomsRes = await pool.query(
@@ -368,57 +639,17 @@ const approveMeeting = async (req, res) => {
       });
 
       assignedRoom = roomsRes.rows.find((r) => !busyRooms.has(r.id));
-      if (!assignedRoom)
-        return res.status(400).json({ message: "No room available" });
+      if (!assignedRoom) {
+        console.log("⚠️ No room available, but continuing without room");
+        // Don't fail the meeting if no room available
+      }
     }
 
-    // Get full license details including tokens
-    const licenseDetails = await pool.query(
-      `SELECT * FROM licenses WHERE id = $1`,
-      [availableLicense.id]
-    );
-
-    if (licenseDetails.rows.length === 0)
-      return res.status(400).json({ message: "License details not found" });
-
-    const license = licenseDetails.rows[0];
-    console.log("🔑 Using license:", license.account);
-
-    // Get valid access token
-    const accessToken = await getValidAccessToken(license);
-    console.log("✅ Access token ready");
-
-    // Create Webex meeting
-    const startISO = new Date(meeting.start_time).toISOString();
-    const endISO = new Date(
-      new Date(meeting.start_time).getTime() + meeting.duration_minutes * 60000
-    ).toISOString();
-
-    console.log("🔄 Creating Webex meeting...");
-
-    const webexMeetingRes = await axios.post(
-      "https://webexapis.com/v1/meetings",
-      {
-        title: meeting.title,
-        start: startISO,
-        end: endISO,
-        agenda: meeting.description || "Meeting created by system",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const meeting_link = webexMeetingRes.data.webLink;
-    const webexMeetingId = webexMeetingRes.data.id;
-    console.log("✅ Webex meeting created:", meeting_link);
+    // Update meeting in database
     await pool.query(
       `UPDATE meetings
-   SET license = $1, conference_room_id = $2, status = 'approved', link = $3, webex_meeting_id = $4
-   WHERE id = $5`,
+       SET license = $1, conference_room_id = $2, status = 'approved', link = $3, webex_meeting_id = $4
+       WHERE id = $5`,
       [
         availableLicense.id,
         assignedRoom ? assignedRoom.id : null,
@@ -427,32 +658,30 @@ const approveMeeting = async (req, res) => {
         meeting_id,
       ]
     );
-    const participantsRes = await pool.query(
-      `SELECT u.email
-       FROM meeting_participants mp
-       JOIN users u ON mp.user_id = u.id
-       WHERE mp.meeting_id = $1`,
-      [meeting_id]
-    );
 
-    const participantsEmails = participantsRes.rows.map((r) => r.email);
-    // Include requester if not already in participant list
-    if (!participantsEmails.includes(meeting.requester_email))
+    console.log("Extracted emails:", participantsEmails); // Debug log
+
+    // Make sure meeting.requester_email exists
+    console.log("Requester email:", meeting.requester_email); // Debug log
+
+    if (!participantsEmails.includes(meeting.requester_email)) {
       participantsEmails.push(meeting.requester_email);
+    }
 
-    // 6️⃣ Send emails to all participants
+    console.log("Final email list:", participantsEmails); // Debug log
+
     const subject = `Meeting Approved: ${meeting.title}`;
     const message = `
-      Your meeting request has been approved!
+  Your meeting request has been approved!
 
-      Title: ${meeting.title}
-      Start Time: ${meeting.start_time}
-      Duration: ${meeting.duration_minutes} minutes
-      Meeting Link: ${meeting_link}
+  Title: ${meeting.title}
+  Start Time: ${meeting.start_time}
+  Duration: ${meeting.duration_minutes} minutes
+  Meeting Link: ${meeting_link}
 
-      Please join using the above link at the scheduled time.
-      Do not share this link with anyone outside your organization.
-    `;
+  Please join using the above link at the scheduled time.
+  Do not share this link with anyone outside your organization.
+`;
 
     await Promise.all(
       participantsEmails.map((email) =>
@@ -465,7 +694,7 @@ const approveMeeting = async (req, res) => {
       )
     );
 
-    console.log("Emails sent to participants:", participantsEmails);
+    console.log("✅ Emails sent to participants:", participantsEmails);
 
     res.json({
       success: true,
@@ -473,10 +702,27 @@ const approveMeeting = async (req, res) => {
       assignedLicense: availableLicense.id,
       assignedRoom: assignedRoom ? assignedRoom.id : null,
       link: meeting_link,
+      webex_meeting_id: webexMeetingId,
     });
   } catch (err) {
-    console.error("approveMeeting error:", err);
-    res.status(500).json({ error: "DB error" });
+    console.error("❌ APPROVE MEETING ERROR:");
+    console.error("Error status:", err.response?.status);
+    console.error("Error data:", err.response?.data);
+    console.error("Error message:", err.message);
+
+    if (err.response?.status === 400) {
+      console.error("🔍 400 BAD REQUEST DETAILS:");
+      console.error(
+        "Webex API Error:",
+        JSON.stringify(err.response?.data, null, 2)
+      );
+      console.error("Request sent:", err.config?.data);
+    }
+
+    res.status(500).json({
+      error: "Failed to approve meeting",
+      details: err.response?.data || err.message,
+    });
   }
 };
 
@@ -485,7 +731,6 @@ const rejectMeeting = async (req, res) => {
   const { meeting_id } = req.body;
 
   try {
-    updateCompletedMeetings();
     const meetingRes = await pool.query(
       `SELECT m.title, u.email AS requester_email
        FROM meetings m
@@ -854,6 +1099,34 @@ async function getValidAccessToken(license) {
     throw err;
   }
 }
+
+const getStatusColor = (status, border = false) => {
+  const colors = {
+    pending: border ? "#f59e0b" : "#fbbf24",
+    approved: border ? "#10b981" : "#34d399",
+    rejected: border ? "#ef4444" : "#f87171",
+    completed: border ? "#6b7280" : "#9ca3af",
+  };
+  return colors[status] || (border ? "#6b7280" : "#9ca3af");
+};
+async function checkWebexInvitees(meetingId, accessToken) {
+  try {
+    const response = await axios.get(
+      `https://webexapis.com/v1/meetings/${meetingId}/invitees`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    console.log("Invites in webex meeting: ", response.data.items);
+    return response.data.items;
+  } catch (error) {
+    console.error(
+      "ERROR in fetching the invitees: ",
+      error.response?.data || error.message
+    );
+  }
+}
+
+setInterval(updateCompletedMeetings, 30 * 60 * 1000);
+setTimeout(updateCompletedMeetings, 5000);
 
 module.exports = {
   getPendingRequests,

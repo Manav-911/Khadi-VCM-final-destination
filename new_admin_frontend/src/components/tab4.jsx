@@ -42,75 +42,12 @@ function tab4() {
     fetchAvailability();
   }, [selectedMeeting]);
 
-  const handleApprove = async () => {
-    if (!selectedMeeting) return;
-
-    try {
-      const res = await axiosInstance.post("/admin/approve-meeting", {
-        meeting_id: selectedMeeting.id,
-      });
-
-      console.log("✅ Approved:", res.data);
-
-      // Refresh pending meetings
-      setfetchMeetings(
-        fetchMeetings.filter((m) => m.id !== selectedMeeting.id)
-      );
-      setSelectedMeeting(null);
-
-      alert(
-        `Meeting approved!\nLicense: ${res.data.assignedLicense}\nRoom: ${
-          res.data.assignedRoom || "Not required"
-        }`
-      );
-    } catch (err) {
-      console.error("Error approving meeting:", err);
-      alert(err.response?.data?.message || "Approval failed");
-    }
-  };
-
-  const handleDecline = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axiosInstance.post("/api/meetings/decline", {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "DECLINED",
-        declinedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setDeclinedMeetings([...declinedMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error declining meeting:", err);
-    }
-  };
-
-  const handlePending = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axiosInstance.post("/api/meetings/pending", {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "pending",
-        pendingAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setPendingMeetings([...pendingMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error pending meeting:", err);
-    }
-  };
-
   useEffect(() => {
     const fetchallMeetings = async () => {
       try {
-        const response = await axiosInstance.get("/admin/pending-request");
+        const response = await axiosInstance.get(
+          "http://localhost:3000/admin/completed-meetings"
+        );
 
         if (response.data) {
           setfetchMeetings(response.data);
@@ -175,8 +112,6 @@ function tab4() {
             <th>ROOM STATUS</th>
             <th>DATE & TIME</th>
             <th>STATUS</th>
-            <th>LICENSE</th>
-            <th>ROOMS AVAIL</th>
           </tr>
         </thead>
         <tbody>
@@ -210,29 +145,6 @@ function tab4() {
                 <td>{f.want_room ? "Yes" : "No"}</td>
                 <td>{formatStr(f.start_time)}</td>
                 <td>{f.status}</td>
-                <td
-                  style={{
-                    color: f.hasAvailableLicense ? "green" : "red",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {f.licenseInfo}
-                </td>
-                <td>
-                  {f.want_room ? (
-                    availableRooms.length > 0 ? (
-                      <span style={{ color: "green", fontWeight: "bold" }}>
-                        {availableRooms.length} available
-                      </span>
-                    ) : (
-                      <span style={{ color: "red", fontWeight: "bold" }}>
-                        No rooms
-                      </span>
-                    )
-                  ) : (
-                    "Not required"
-                  )}
-                </td>
               </tr>
             ))
           )}

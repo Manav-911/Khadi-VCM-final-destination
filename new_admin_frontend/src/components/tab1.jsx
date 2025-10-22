@@ -50,6 +50,9 @@ function tab1() {
         "http://localhost:3000/admin/approve-meeting",
         {
           meeting_id: selectedMeeting.id,
+        },
+        {
+          timeout: 30000,
         }
       );
 
@@ -75,7 +78,7 @@ function tab1() {
   const handleDecline = async () => {
     if (!selectedMeeting) return;
     try {
-      await axiosInstance.post("/api/meetings/decline", {
+      await axiosInstance.post("http://localhost:3000/admin/reject-meeting", {
         id: selectedMeeting.id,
       });
       const updatedMeeting = {
@@ -88,25 +91,6 @@ function tab1() {
       setSelectedMeeting(null);
     } catch (err) {
       console.error("Error declining meeting:", err);
-    }
-  };
-
-  const handlePending = async () => {
-    if (!selectedMeeting) return;
-    try {
-      await axiosInstance.post("/api/meetings/pending", {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "pending",
-        pendingAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setPendingMeetings([...pendingMeetings, updatedMeeting]);
-      setSelectedMeeting(null);
-    } catch (err) {
-      console.error("Error pending meeting:", err);
     }
   };
 
@@ -141,7 +125,7 @@ function tab1() {
     new Date(str).toLocaleString("en-IN", {
       dateStyle: "medium",
       timeStyle: "short",
-      timeZone: "UTC",
+      timeZone: "Asia/Kolkata",
     });
 
   return (

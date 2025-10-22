@@ -24,6 +24,15 @@ app.use("/login", authRouter);
 app.use("/meeting", meetingRouter);
 app.use("/admin", manageMeetingRouter);
 app.use("/manageUser", manageUserRouter);
+app.get("/oauth/callback", async (req, res) => {
+  const { code } = req.query;
+  console.log("Authorization code:", code);
+
+  // Exchange code for access + refresh token
+  // (use axios POST to https://webexapis.com/v1/access_token)
+
+  res.send("Authorization successful! You can close this page.");
+});
 app.listen(port, () => {
   console.log(`Server listning on PORT ${port}`);
 });
