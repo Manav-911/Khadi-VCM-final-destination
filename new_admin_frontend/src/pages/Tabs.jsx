@@ -5,6 +5,7 @@ import Tab1 from "../components/tab1";
 import Tab2 from "../components/tab2";
 import Tab3 from "../components/tab3";
 import Tab4 from "../components/tab4";
+import Tab5 from "../components/tab5.jsx";
 import "../styles/page.css";
 import "../App.css";
 import RequestMeeting from "../components/meeting/RequestMeetingForm.jsx";
@@ -75,6 +76,12 @@ function TabsTemp() {
             >
               Completed
             </button>
+            <button
+              className={action === "Tab5" ? "btn active" : "btn"}
+              onClick={() => setAction("Tab5")}
+            >
+              🎥
+            </button>
           </div>
         </div>
       </div>
@@ -88,6 +95,7 @@ function TabsTemp() {
           {action === "Tab2" ? <Tab2 /> : null}
           {action === "Tab3" ? <Tab3 /> : null}
           {action === "Tab4" ? <Tab4 /> : null}
+          {action === "Tab5" ? <Tab5 /> : null}
         </div>
       </div>
       <Footer />

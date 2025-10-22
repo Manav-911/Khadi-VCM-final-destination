@@ -15,6 +15,9 @@ const {
   getApprovedMeeting,
   getAvailableLicenses,
   getCompletedMeetings,
+  getRecordingRequestsByStatus,
+  acceptMeetingRecordingRequest,
+  rejectMeetingRecordingRequest
 } = require("../controllers/manageMeeting.controller.js");
 
 const manageMeetingRouter = express.Router();
@@ -74,5 +77,27 @@ manageMeetingRouter.get(
   isAdmin,
   getAvailableLicenses
 );
+
+manageMeetingRouter.get(
+  "/recording-requests/:status",
+  authenticateToken,
+  isAdmin,
+  getRecordingRequestsByStatus
+);
+
+manageMeetingRouter.post(
+  "/recording-requests/accept",
+  authenticateToken,
+  isAdmin,
+  acceptMeetingRecordingRequest
+);
+
+manageMeetingRouter.post(
+  "/recording-requests/reject",
+  authenticateToken,
+  isAdmin,
+  rejectMeetingRecordingRequest
+);
+
 
 module.exports = manageMeetingRouter;

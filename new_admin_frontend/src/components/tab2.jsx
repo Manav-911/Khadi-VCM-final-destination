@@ -31,7 +31,7 @@ function tab2() {
     }
 
     try {
-      await axios.post(`${URL}/api/meetings/approve`, {
+      await axios.post(`${URL}/admin/approve-meeting`, {
         id: selectedMeeting.id,
       });
       const updatedMeeting = {

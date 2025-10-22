@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "crypto": "^1.0.1",
-    "nodemailer": "^7.0.9"
+    "navigate": "^0.3.6",
+    "nodemailer": "^7.0.9",
+    "react-router-dom": "^7.9.4"
   }
 }

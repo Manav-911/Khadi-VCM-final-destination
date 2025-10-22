@@ -10,7 +10,7 @@ import CalendarView from "../components/calendar/CalendarView.jsx";
 // import supabase from "../config/supabaseClient.js";
 const URL = "http://localhost:3000";
 
-function tab2() {
+function tab5() {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
@@ -22,7 +22,12 @@ function tab2() {
   const [fetchMeetings, setfetchMeetings] = useState(null);
   const [showDeclined, setShowDeclined] = useState(false);
   const [showPending, setShowPending] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [action, setAction] = useState("");
+  const [status, setStatus] = useState("pending");
   // ✅ Needed for navigation
+
+  const toggleDropdown = () => setOpen(!open);
 
   const handleApprove = async () => {
     if (!selectedMeeting) {
@@ -85,17 +90,16 @@ function tab2() {
     }
   };
   useEffect(() => {
-    const fetchallMeetings = async () => {
+    // if (!status) return;
+      const fetchallMeetings = async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:3000/admin/completed-meetings",
+        `http://localhost:3000/admin/recording-requests/${status}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data) {
-        setfetchMeetings(response.data);
-        console.log(response);
-
+      if (response.data?.requests) {
+        setfetchMeetings(response.data.requests); // ✅ FIXED
         setFetchError(null);
       }
     };
@@ -123,10 +127,34 @@ function tab2() {
   return (
     <div className="right-panel-meeting">
       <div>
-        <h3>MEETING DETAILS</h3>
-        <button className="clear-btn" onClick={() => setSelectedMeeting(null)}>
-          CLEAR
-        </button>
+        <div style={{display:'flex'}}> 
+          <div>
+            <h3>MEETING DETAILS</h3>
+          </div>
+          <div className="request-meeting">
+            <button
+              className="btn"
+              onClick={() => {
+                toggleDropdown();
+                // Toggle action between "status" and "" (or null)
+                setAction(prev => (prev === "status" ? "" : "status"));
+              }}
+            >
+              {action === "status" ? "▼ Status" : "▲ Status"}
+            </button>
+            {open && (
+              <div className="dropdown-menu">
+                <button className="dropdown-item" onClick={() => setStatus("approved")}>Approve</button>
+                <button className="dropdown-item" onClick={() => setStatus("rejected")}>Rejected</button>
+                <button className="dropdown-item" onClick={() => setStatus("pending")}>Pending</button>
+                <button className="dropdown-item" onClick={() => setStatus("completed")}>Completed</button>
+              </div>
+            )}
+          </div>
+          </div>
+          <button className="clear-btn" onClick={() => setSelectedMeeting(null)}>
+            CLEAR
+          </button>
         {selectedMeeting ? (
           <>
             <p>
@@ -199,12 +227,10 @@ function tab2() {
             ) : (
               fetchMeetings.map((f) => (
                 <tr key={f.id} onClick={() => setSelectedMeeting(f)}>
-                  <td>{f.id}</td>
-                  <td>{f.title}</td>
-                  <td>{f.want_room ? "Yes" : "No"}</td>
-                  <td>
-                    {f.date} {f.start_time}
-                  </td>
+                  <td>{f.request_id}</td>
+                  <td>{f.meeting_title}</td>
+                  <td>{f.requester_name}</td>
+                  <td>{new Date(f.start_time).toLocaleString()}</td>
                   <td>
                     <span className={`status ${f.status?.toLowerCase()}`}>
                       {f.status}
@@ -220,4 +246,4 @@ function tab2() {
   );
 }
 
-export default tab2;
+export default tab5;

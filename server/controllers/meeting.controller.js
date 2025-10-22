@@ -366,6 +366,55 @@ const cancelUserMeeting = async (req, res) => {
   }
 };
 
+const requestMeetingRecording = async (req, res) => {
+  const { meetingId } = req.params;
+  const userId = req.user.userId; // Assuming this comes from your auth middleware
+
+  try {
+    // 1. Check if the meeting exists (your existing code)
+    const meetingQuery =
+      "SELECT id FROM meetings WHERE id = $1 AND status = 'completed'";
+    const meetingResult = await pool.query(meetingQuery, [meetingId]);
+
+    if (meetingResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+
+    const webex_meeting_id = meetingResult.rows[0].webex_meeting_id;
+
+    const existingRequestQuery = `SELECT id FROM meeting_recording_requests WHERE meeting_id = $1 AND requested_by = $2`;
+    const existingRequestResult = await pool.query(existingRequestQuery, [
+      meetingId,
+      userId,
+    ]);
+
+    if (existingRequestResult.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Recording request already exists for this meeting",
+      });
+    }
+
+    // 2. Insert a new recording request
+    const insertQuery = `INSERT INTO meeting_recording_requests (meeting_id, requested_by, status) VALUES ($1, $2, 'pending') RETURNING *`;
+    const insertResult = await pool.query(insertQuery, [meetingId, userId]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Recording request created successfully",
+      data: insertResult.rows[0],
+    });
+  } catch (error) {
+    console.error("Error creating recording request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while creating recording request",
+    });
+  }
+};
+
 module.exports = {
   addMeeting,
   checkLicense,

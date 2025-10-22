@@ -16,39 +16,57 @@ function AddUser({ open, onClose }) {
   const [formError, setFormError] = useState(null);
 
   const handleSubmit = async (e) => {
-    const token = localStorage.getItem("token");
+  e.preventDefault();
 
-    e.preventDefault();
+  const token = localStorage.getItem("token");
 
-    if (!name || !email || !password || !phone) {
-      setFormError("Please fill in all fields correctly");
-      console.log("fill all details");
-    }
+  // ✅ Input validation
+  if (!name || !email || !password || !phone) {
+    setFormError("Please fill in all fields correctly");
+    alert("⚠️ Please fill in all fields before submitting");
+    return;
+  }
 
+  try {
     const response = await axios.post(
       "http://localhost:3000/manageUser/addUser",
-      {
-        name,
-        email,
-        password,
-        phone,
-      },
+      { name, email, password, phone },
       {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
 
-    if (response.error) {
-      setFormError(response.error);
-      console.log(formError);
-    }
-    if (response.data.success) {
+    // ✅ Handle success
+    if (response.data?.success) {
       setFormError(null);
-      console.log(response.data);
+      alert("✅ User added successfully!");
+      onClose(true);
+    } else {
+      const message = response.data?.message || "Something went wrong.";
+      setFormError(message);
+      alert(`❌ Failed to add user: ${message}`);
     }
-    alert("Form Submitted successfully");
-    onClose(true);
-  };
+  } catch (error) {
+    // ✅ Catch & handle all Axios errors
+    console.error("Error adding user:", error);
+
+    if (error.response) {
+      // Server responded with error status (400, 401, etc.)
+      const msg =
+        error.response.data?.message ||
+        `Server responded with status ${error.response.status}`;
+      alert(`❌ Request failed: ${msg}`);
+    } else if (error.request) {
+      // Request was made but no response received
+      alert("⚠️ No response from server. Please check your connection.");
+    } else {
+      // Something else went wrong
+      alert("❌ Error: " + error.message);
+    }
+
+    setFormError("Failed to add user. Please check console for details.");
+  }
+};
 
   return (
     <div className="meeting-form-container popup">

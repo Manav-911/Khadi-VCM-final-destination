@@ -165,6 +165,9 @@ export default function Login() {
                 {errors.password && (
                   <span className="error-text">{errors.password}</span>
                 )}
+                <button className="forgot" onClick={() => navigate("/forgot-password")}>
+                  Forgot Password?
+                </button>
               </div>
 
               <button

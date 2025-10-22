@@ -7,6 +7,8 @@ import RequestMeetingForm from './components/meeting/RequestMeetingForm';
 import PreviousMeeting from "./components/meeting/PreviousMeeting";
 import MeetingStatus from './components/meeting/MeetingStatus';
 import { MeetingProvider } from "../src/components/context/MeetingContext";
+import ForgotPasswordRequest from './pages/ForgotPass';
+import ResetPass from './pages/ResetPass';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="previous" element={<PreviousMeeting />} />
             <Route path="stat" element={<MeetingStatus />} />
           </Route>
+          <Route path="/forgot-password" element={<ForgotPasswordRequest />} />
+          <Route path="/reset-password" element={<ResetPass />} />
         </Routes>
       </MeetingProvider>
     </Router>

@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
 const { get } = require("http");
+const axios = require("axios");
 dotenv.config();
 
 const formatLocal = (d) => {
@@ -19,6 +20,9 @@ const formatLocal = (d) => {
 };
 
 const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false,
   service: "gmail",
   auth: {
     user: "zap14479@gmail.com",
@@ -28,6 +32,26 @@ const transporter = nodemailer.createTransport({
 
 console.log(process.env.EMAIL);
 console.log(process.env.PASSWORD);
+
+async function sendResetEmail({ to, resetUrl, name }) {
+  const html = `
+    <p>Hi ${name || "there"},</p>
+    <p>You requested a password reset. Click the link below to set a new password. This link will expire in ${process.env.PASSWORD_RESET_TOKEN_EXPIRATION_MIN || 60} minutes.</p>
+    <p><a href="${resetUrl}">Reset your password</a></p>
+    <p>If you didn't request this, you can safely ignore this email.</p>
+    <p>— Your Team</p>
+  `;
+
+  const info = await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject: "Reset your password",
+    html,
+  });
+
+  return info;
+}
+
 
 const updateCompletedMeetings = async () => {
   const now = new Date();
@@ -371,25 +395,61 @@ const approveMeeting = async (req, res) => {
         return res.status(400).json({ message: "No room available" });
     }
 
-    //Generate meeting link
-    const meeting_link = `https://meet.jit.si/${crypto
-      .randomBytes(6)
-      .toString("hex")}`;
+    // Get full license details including tokens
+    const licenseDetails = await pool.query(
+      `SELECT * FROM licenses WHERE id = $1`,
+      [availableLicense.id]
+    );
 
-    console.log("meeting link: ", meeting_link);
+    if (licenseDetails.rows.length === 0)
+      return res.status(400).json({ message: "License details not found" });
 
+    const license = licenseDetails.rows[0];
+    console.log("🔑 Using license:", license.account);
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(license);
+    console.log("✅ Access token ready");
+
+    // Create Webex meeting
+    const startISO = new Date(meeting.start_time).toISOString();
+    const endISO = new Date(
+      new Date(meeting.start_time).getTime() + meeting.duration_minutes * 60000
+    ).toISOString();
+
+    console.log("🔄 Creating Webex meeting...");
+
+    const webexMeetingRes = await axios.post(
+      "https://webexapis.com/v1/meetings",
+      {
+        title: meeting.title,
+        start: startISO,
+        end: endISO,
+        agenda: meeting.description || "Meeting created by system",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const meeting_link = webexMeetingRes.data.webLink;
+    const webexMeetingId = webexMeetingRes.data.id;
+    console.log("✅ Webex meeting created:", meeting_link);
     await pool.query(
       `UPDATE meetings
-       SET license = $1, conference_room_id = $2, status = 'approved', link = $3
-       WHERE id = $4`,
+   SET license = $1, conference_room_id = $2, status = 'approved', link = $3, webex_meeting_id = $4
+   WHERE id = $5`,
       [
         availableLicense.id,
         assignedRoom ? assignedRoom.id : null,
         meeting_link,
+        webexMeetingId,
         meeting_id,
       ]
     );
-
     const participantsRes = await pool.query(
       `SELECT u.email
        FROM meeting_participants mp
@@ -535,7 +595,291 @@ const addMeeting = async (req, res) => {
   }
 };
 
+const acceptMeetingRecordingRequest = async (req, res) => {
+  const { request_id } = req.body;
+  const adminId = req.user.userId;
+
+  try {
+    // 1. Get recording request details
+    const requestQuery = `
+      SELECT 
+        mrr.*,
+        m.webex_meeting_id,
+        m.license,
+        m.title as meeting_title,
+        l.access_token,
+        l.client_id,
+        l.client_secret,
+        l.refresh_token
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN licenses l ON m.license = l.id
+      WHERE mrr.id = $1
+    `;
+
+    const requestResult = await pool.query(requestQuery, [request_id]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ message: "Recording request not found" });
+    }
+
+    const recordingRequest = requestResult.rows[0];
+
+    // 2. Get access token
+    const accessToken = await getValidAccessToken({
+      id: recordingRequest.license,
+      client_id: recordingRequest.client_id,
+      client_secret: recordingRequest.client_secret,
+      refresh_token: recordingRequest.refresh_token,
+      access_token: recordingRequest.access_token,
+    });
+
+    // 3. Fetch recording from Webex
+    console.log(
+      `Fetching recording for meeting: ${recordingRequest.webex_meeting_id}`
+    );
+
+    const recordingsRes = await axios.get(
+      `https://webexapis.com/v1/recordings?meetingId=${recordingRequest.webex_meeting_id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    // 4. Check if recording exists
+    if (recordingsRes.data.items.length === 0) {
+      return res.status(404).json({
+        message: "Recording not yet available in Webex",
+      });
+    }
+
+    // 5. Get recording URL
+    const recording = recordingsRes.data.items[0];
+    const recordingUrl =
+      recording.downloadUrl || recording.playbackUrl || recording.shareUrl;
+
+    console.log(`Recording found: ${recordingUrl}`);
+
+    // 6. Update request with recording URL
+    const updateResult = await pool.query(
+      `UPDATE meeting_recording_requests
+       SET status = 'completed', 
+           recording_url = $1, 
+       WHERE id = $2
+       RETURNING *;`,
+      [recordingUrl, request_id]
+    );
+
+    const updatedRequest = updateResult.rows[0];
+
+    // 7. Send email to user
+    const userQuery = `SELECT email, name FROM users WHERE id = $1`;
+    const userResult = await pool.query(userQuery, [
+      recordingRequest.requested_by,
+    ]);
+
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      await transporter.sendMail({
+        from: process.env.EMAIL,
+        to: user.email,
+        subject: `Recording Available: ${recordingRequest.meeting_title}`,
+        text: `
+          Your meeting recording is now available!
+          
+          Meeting: ${recordingRequest.meeting_title}
+          Recording URL: ${recordingUrl}
+          
+          You can access the recording using the link above.
+        `,
+      });
+      console.log(`Email sent to ${user.email}`);
+    }
+
+    res.json({
+      success: true,
+      message: "Recording request completed successfully",
+      recording_url: recordingUrl,
+      request: updatedRequest,
+    });
+  } catch (err) {
+    console.error("Error accepting recording request:", err);
+    res.status(500).json({
+      error: "Failed to process recording request",
+      details: err.message,
+    });
+  }
+};
+
+const rejectMeetingRecordingRequest = async (req, res) => {
+  const { request_id } = req.body;
+
+  try {
+    // 1. Get the request details including user info for email
+    const requestQuery = `
+      SELECT 
+        mrr.*,
+        m.title as meeting_title,
+        u.email as user_email,
+        u.name as user_name
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN users u ON mrr.requested_by = u.id
+      WHERE mrr.id = $1
+    `;
+
+    const requestResult = await pool.query(requestQuery, [request_id]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const recordingRequest = requestResult.rows[0];
+
+    // 2. Update the request status to rejected
+    const updateResult = await pool.query(
+      `UPDATE meeting_recording_requests
+       SET status = 'rejected',
+       WHERE id = $1
+       RETURNING *;`,
+      [request_id]
+    );
+
+    const updatedRequest = updateResult.rows[0];
+
+    // 3. Send rejection email to the user
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL,
+        to: recordingRequest.user_email,
+        subject: `Recording Request Rejected: ${recordingRequest.meeting_title}`,
+        text: `
+          Your recording request has been rejected.
+          
+          Meeting: ${recordingRequest.meeting_title}
+          Request ID: ${request_id}
+          
+          If you believe this was a mistake, please contact your administrator.
+        `,
+      });
+      console.log(`✅ Rejection email sent to ${recordingRequest.user_email}`);
+    } catch (emailError) {
+      console.error("Failed to send rejection email:", emailError);
+      // Continue even if email fails
+    }
+
+    res.json({
+      success: true,
+      message: "Recording request rejected successfully",
+      request: updatedRequest,
+    });
+  } catch (err) {
+    console.error("Error rejecting recording request:", err);
+    res.status(500).json({
+      success: false,
+      error: "Database error",
+    });
+  }
+};
+
+const getRecordingRequestsByStatus = async (req, res) => {
+  const adminOfficeId = req.user.officeId;
+  const { status } = req.params; // 'pending', 'approved', 'completed', 'rejected'
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        mrr.id as request_id,
+        mrr.meeting_id,
+        mrr.requested_at,
+        mrr.status,
+        mrr.recording_url,
+        m.title as meeting_title,
+        m.start_time,
+        m.duration_minutes,
+        u.name as requester_name,
+        u.email as requester_email
+      FROM meeting_recording_requests mrr
+      JOIN meetings m ON mrr.meeting_id = m.id
+      JOIN users u ON mrr.requested_by = u.id
+      WHERE u.office = $1 AND mrr.status = $2
+      ORDER BY mrr.requested_at DESC
+    `,
+      [adminOfficeId, status]
+    );
+
+    res.json({
+      success: true,
+      status: status,
+      count: result.rows.length,
+      requests: result.rows,
+    });
+  } catch (err) {
+    console.error("Error fetching recording requests by status:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+};
+
+async function getValidAccessToken(license) {
+  const now = new Date();
+
+  // Check if we have a valid access token
+  if (
+    license.access_token &&
+    license.token_expiry &&
+    new Date(license.token_expiry) > now
+  ) {
+    console.log("✅ Using existing valid access token");
+    return license.access_token;
+  }
+
+  console.log("🔄 Access token expired or missing, refreshing...");
+
+  try {
+    const response = await axios.post(
+      "https://webexapis.com/v1/access_token",
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: license.client_id,
+        client_secret: license.client_secret,
+        refresh_token: license.refresh_token,
+      }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    const newAccessToken = response.data.access_token;
+    const newRefreshToken = response.data.refresh_token;
+    const expiresIn = response.data.expires_in;
+
+    console.log("✅ New access token obtained");
+    console.log("Expires in:", expiresIn, "seconds");
+
+    // Update both tokens and expiry in DB
+    const expiryTime = new Date();
+    expiryTime.setSeconds(expiryTime.getSeconds() + expiresIn - 60); // 60 second safety margin
+
+    await pool.query(
+      `UPDATE licenses 
+       SET access_token = $1, refresh_token = $2, token_expiry = $3
+       WHERE id = $4`,
+      [newAccessToken, newRefreshToken, expiryTime, license.id]
+    );
+
+    console.log("✅ Tokens updated in database");
+    return newAccessToken;
+  } catch (err) {
+    console.error(
+      "❌ Failed to refresh access token:",
+      err.response?.data || err.message
+    );
+    throw err;
+  }
+}
+
 module.exports = {
+  transporter,
+  sendResetEmail,
   getPendingRequests,
   getCancelledMeetings,
   getApprovedMeeting,
@@ -545,4 +889,7 @@ module.exports = {
   approveMeeting,
   rejectMeeting,
   addMeeting,
+  acceptMeetingRecordingRequest,
+  rejectMeetingRecordingRequest,
+  getRecordingRequestsByStatus,
 };

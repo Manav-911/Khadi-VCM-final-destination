@@ -5,6 +5,7 @@ const authRouter = require("./routes/auth.Router.js");
 const meetingRouter = require("./routes/meeting.Router.js");
 const manageMeetingRouter = require("./routes/manageMeeting.Router.js");
 const manageUserRouter = require("./routes/manageUser.Router.js");
+const resetPassRouter = require("./routes/resetPass.Router.js");
 const client = require("./config/new_db.js");
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.use("/login", authRouter);
 app.use("/meeting", meetingRouter);
 app.use("/admin", manageMeetingRouter);
 app.use("/manageUser", manageUserRouter);
+app.use("/reset-password", resetPassRouter);
 app.listen(port, () => {
-  console.log(`Server listning on PORT ${port}`);
+  console.log(`Server listening on PORT ${port}`);
 });

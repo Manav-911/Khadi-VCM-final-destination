@@ -75,19 +75,29 @@ function tab1() {
   const handleDecline = async () => {
     if (!selectedMeeting) return;
     try {
-      await axiosInstance.post("/api/meetings/decline", {
-        id: selectedMeeting.id,
-      });
-      const updatedMeeting = {
-        ...selectedMeeting,
-        status: "DECLINED",
-        declinedAt: new Date(),
-      };
-      setMeetings(meetings.filter((m) => m.id !== selectedMeeting.id));
-      setDeclinedMeetings([...declinedMeetings, updatedMeeting]);
+      const res = await axiosInstance.post(
+        "http://localhost:3000/admin/reject-meeting",
+        {
+          meeting_id: selectedMeeting.id,
+        }
+      );
+
+      console.log("❌ Declined:", res.data);
+
+      // Refresh pending meetings
+      setfetchMeetings(
+        fetchMeetings.filter((m) => m.id !== selectedMeeting.id)
+      );
       setSelectedMeeting(null);
+
+      alert(
+        `Meeting declined!\nLicense: ${res.data.assignedLicense}\nRoom: ${
+          res.data.assignedRoom || "Not required"
+        }`
+      );
     } catch (err) {
-      console.error("Error declining meeting:", err);
+      console.error("Error approving meeting:", err);
+      alert(err.response?.data?.message || "Approval failed");
     }
   };
 
