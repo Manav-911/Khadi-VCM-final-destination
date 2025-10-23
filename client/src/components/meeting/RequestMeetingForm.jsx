@@ -36,6 +36,11 @@ export default function RequestMeetingForm() {
       const durationHrs = parseInt(formData.durationHours);
       const durationMins = parseInt(formData.durationMinutes);
 
+      console.log(
+        "User entered:",
+        `${hours}:${minutes.toString().padStart(2, "0")} ${formData.amPm} IST`
+      );
+
       let totalMinutes =
         (hours % 12) * 60 + minutes + durationHrs * 60 + durationMins;
       if (formData.amPm === "PM") totalMinutes += 12 * 60;
@@ -74,17 +79,22 @@ export default function RequestMeetingForm() {
 
     // Step 1: Create date with user's IST time
     const userISTDate = new Date(date);
-    const hour24 = (hour % 12) + (isPM && hour !== 12 ? 12 : 0);
+    let hour24 = hour;
+    if (isPM && hour < 12) {
+      hour24 = hour + 12;
+    } else if (!isPM && hour === 12) {
+      hour24 = 0;
+    }
     userISTDate.setHours(hour24, minute, 0, 0);
 
-    const utcDate = userISTDate;
+    const utcDateString = userISTDate.toISOString();
 
     console.log("🕐 TIME CONVERSION:");
     console.log(
       "User entered:",
       `${hour}:${minute.toString().padStart(2, "0")} ${formData.amPm} IST`
     );
-    console.log("As UTC for DB:", utcDate.toISOString());
+    console.log("As UTC for DB:", utcDateString);
     console.log("Will display as:", userISTDate.toLocaleString("en-IN"));
 
     const allparticipants = [...(formData.participants.individuals || [])];
@@ -92,7 +102,7 @@ export default function RequestMeetingForm() {
     const payload = {
       title: formData.title,
       description: formData.description,
-      start_time: utcDate.toISOString(), // Store as UTC
+      start_time: utcDateString, // Store as UTC
       duration_minutes:
         parseInt(formData.durationHours || 0) * 60 +
         parseInt(formData.durationMinutes || 0),
