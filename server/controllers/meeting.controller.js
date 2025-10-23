@@ -606,6 +606,91 @@ const requestMeetingRecording = async (req, res) => {
     });
   }
 };
+const getMeetingAttendance = async (req, res) => {
+  const { meeting_id } = req.params;
+  const userId = req.user.userId;
+
+  console.log("📊 Fetching attendance for meeting:", meeting_id);
+
+  try {
+    // 1. Verify meeting exists and user has permission
+    const meetingResult = await pool.query(
+      `SELECT m.*, u.id as requester_id 
+       FROM meetings m 
+       JOIN users u ON m.requested_by = u.id 
+       WHERE m.id = $1`,
+      [meeting_id]
+    );
+
+    if (meetingResult.rows.length === 0) {
+      return res.status(404).json({ error: "Meeting not found" });
+    }
+
+    const meetingData = meetingResult.rows[0];
+
+    // if (userRole !== 'admin' && meetingData.requester_id !== userId) {
+    //   return res.status(403).json({ error: "Access denied" });
+    // }
+
+    // 2. Get attendance data
+    const attendanceRes = await pool.query(
+      `SELECT attendance_data FROM meeting_attendance WHERE meeting_id = $1`,
+      [meeting_id]
+    );
+
+    if (attendanceRes.rows.length === 0) {
+      return res.status(404).json({ error: "No attendance data found" });
+    }
+
+    // 3. Handle the data - try direct use first, then parse if needed
+    let attendanceData = attendanceRes.rows[0].attendance_data;
+
+    // If it's a string, try to parse it
+    if (typeof attendanceData === "string") {
+      try {
+        attendanceData = JSON.parse(attendanceData);
+      } catch (error) {
+        console.error("JSON parse error:", error);
+        return res
+          .status(500)
+          .json({ error: "Invalid attendance data format" });
+      }
+    }
+
+    // 4. Process the data (handle different possible structures)
+    const participants =
+      attendanceData.items ||
+      attendanceData.participants ||
+      attendanceData ||
+      [];
+
+    const processed = participants.map((p) => ({
+      name: p.displayName || p.name || "Unknown",
+      email: p.email || "",
+      attended: p.joinTime != null,
+      joinTime: p.joinTime ? new Date(p.joinTime).toLocaleString() : null,
+      duration: p.duration ? Math.round(p.duration / 60000) + " mins" : "N/A",
+    }));
+
+    const attendedCount = processed.filter((p) => p.attended).length;
+    const totalParticipants = processed.length;
+    const attendanceRate =
+      totalParticipants > 0
+        ? Math.round((attendedCount / totalParticipants) * 100)
+        : 0;
+
+    res.json({
+      success: true,
+      totalParticipants,
+      attendedCount,
+      attendanceRate,
+      participants: processed,
+    });
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 module.exports = {
   addMeeting,
@@ -617,4 +702,5 @@ module.exports = {
   getUsers,
   cancelUserMeeting,
   requestMeetingRecording,
+  getMeetingAttendance,
 };

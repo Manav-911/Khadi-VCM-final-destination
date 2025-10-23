@@ -9,6 +9,10 @@ export default function PreviousMeeting() {
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [loadingRecording, setLoadingRecording] = useState({}); // Track loading state per meeting
+  const [requestStatus, setRequestStatus] = useState({}); // Track request status per meeting
+  const [loadingAttendance, setLoadingAttendance] = useState({}); // Track loading state for attendance
+  const [attendanceData, setAttendanceData] = useState({}); // Store attendance data per meeting
 
   const fetchMeetings = async () => {
     try {
@@ -44,6 +48,182 @@ export default function PreviousMeeting() {
   useEffect(() => {
     fetchMeetings();
   }, []);
+
+  // Handle recording request
+  const handleRequestRecording = async (meetingId, meetingTitle) => {
+    try {
+      // Set loading state for this specific meeting
+      setLoadingRecording((prev) => ({ ...prev, [meetingId]: true }));
+
+      const token = localStorage.getItem("token");
+
+      console.log("📤 Frontend - Making recording request:", {
+        meetingId,
+        meetingTitle,
+        tokenExists: !!token,
+      });
+
+      // Convert meetingId to number to ensure it's the correct type
+      const numericMeetingId = Number(meetingId);
+
+      const response = await axios.post(
+        `http://localhost:3000/meeting/request-recording/${numericMeetingId}`,
+        {}, // empty body
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+          timeout: 10000,
+        }
+      );
+
+      console.log("✅ Frontend - Recording request successful:", response.data);
+
+      // Update request status
+      setRequestStatus((prev) => ({
+        ...prev,
+        [meetingId]: {
+          success: true,
+          message:
+            response.data.message ||
+            "Recording request submitted successfully!",
+        },
+      }));
+    } catch (err) {
+      console.error("❌ Frontend - Failed to request recording:", {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+      });
+
+      let errorMessage = "Failed to request recording. Please try again.";
+
+      if (err.response?.status === 404) {
+        errorMessage =
+          "Recording request endpoint not found (404). Please contact administrator.";
+      } else if (err.response?.status === 400) {
+        errorMessage =
+          err.response?.data?.message ||
+          "You have already requested recording for this meeting.";
+      } else if (err.response?.status === 403) {
+        errorMessage =
+          "You don't have permission to request recording for this meeting.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.code === "NETWORK_ERROR") {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (err.code === "ECONNABORTED") {
+        errorMessage = "Request timeout. Please try again.";
+      }
+
+      // Update request status with error
+      setRequestStatus((prev) => ({
+        ...prev,
+        [meetingId]: {
+          success: false,
+          message: errorMessage,
+        },
+      }));
+    } finally {
+      // Clear loading state
+      setLoadingRecording((prev) => ({ ...prev, [meetingId]: false }));
+
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setRequestStatus((prev) => {
+          const newStatus = { ...prev };
+          delete newStatus[meetingId];
+          return newStatus;
+        });
+      }, 5000);
+    }
+  };
+
+  // Handle fetch attendance
+  const handleFetchAttendance = async (meetingId, meetingTitle) => {
+    try {
+      // Set loading state for this specific meeting
+      setLoadingAttendance((prev) => ({ ...prev, [meetingId]: true }));
+
+      const token = localStorage.getItem("token");
+
+      console.log("📊 Fetching attendance for meeting:", {
+        meetingId,
+        meetingTitle,
+      });
+
+      const response = await axios.get(
+        `http://localhost:3000/meeting/get-meeting-attendance/${meetingId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+          timeout: 10000,
+        }
+      );
+
+      console.log("✅ Attendance data received:", response.data);
+
+      // Store attendance data
+      setAttendanceData((prev) => ({
+        ...prev,
+        [meetingId]: response.data,
+      }));
+
+      // Show success message
+      setRequestStatus((prev) => ({
+        ...prev,
+        [meetingId]: {
+          success: true,
+          message: `Attendance data loaded! Total participants: ${response.data.totalParticipants}`,
+        },
+      }));
+    } catch (err) {
+      console.error("❌ Failed to fetch attendance:", {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+
+      let errorMessage = "Failed to fetch attendance data.";
+
+      if (err.response?.status === 404) {
+        errorMessage = "Attendance data not available for this meeting.";
+      } else if (err.response?.status === 403) {
+        errorMessage =
+          "You don't have permission to view attendance for this meeting.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      // Update request status with error
+      setRequestStatus((prev) => ({
+        ...prev,
+        [meetingId]: {
+          success: false,
+          message: errorMessage,
+        },
+      }));
+    } finally {
+      // Clear loading state
+      setLoadingAttendance((prev) => ({ ...prev, [meetingId]: false }));
+
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setRequestStatus((prev) => {
+          const newStatus = { ...prev };
+          delete newStatus[meetingId];
+          return newStatus;
+        });
+      }, 5000);
+    }
+  };
 
   // Filter meetings by search and date
   const filteredMeetings = meetings.filter((m) => {
@@ -119,7 +299,97 @@ export default function PreviousMeeting() {
                       : "N/A"}
                   </span>
                 </div>
-                <button className="pm-btn">Request Recording</button>
+
+                {/* Attendance Summary (if available) */}
+                {attendanceData[meeting.id] && (
+                  <div className="pm-attendance-summary">
+                    <div className="attendance-stats">
+                      <span>
+                        👥 {attendanceData[meeting.id].totalParticipants} Total
+                      </span>
+                      <span>
+                        ✅ {attendanceData[meeting.id].attendedCount} Present
+                      </span>
+                      <span>
+                        📊 {attendanceData[meeting.id].attendanceRate}% Rate
+                      </span>
+                    </div>
+                    <div className="attendance-preview">
+                      {attendanceData[meeting.id].participants
+                        .slice(0, 3)
+                        .map((p, index) => (
+                          <span
+                            key={index}
+                            className={`attendee ${
+                              p.attended ? "present" : "absent"
+                            }`}
+                          >
+                            {p.attended ? "✅" : "❌"} {p.name}
+                          </span>
+                        ))}
+                      {attendanceData[meeting.id].participants.length > 3 && (
+                        <span className="more-attendees">
+                          +{attendanceData[meeting.id].participants.length - 3}{" "}
+                          more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Status Message */}
+                {requestStatus[meeting.id] && (
+                  <div
+                    className={`pm-status ${
+                      requestStatus[meeting.id].success
+                        ? "pm-status-success"
+                        : "pm-status-error"
+                    }`}
+                  >
+                    {requestStatus[meeting.id].message}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="pm-action-buttons">
+                  <button
+                    className={`pm-btn pm-btn-attendance ${
+                      loadingAttendance[meeting.id] ? "pm-btn-loading" : ""
+                    }`}
+                    onClick={() =>
+                      handleFetchAttendance(meeting.id, meeting.title)
+                    }
+                    disabled={loadingAttendance[meeting.id]}
+                  >
+                    {loadingAttendance[meeting.id] ? (
+                      <>
+                        <div className="pm-btn-spinner"></div>
+                        Loading...
+                      </>
+                    ) : (
+                      <>📊 Attendance</>
+                    )}
+                  </button>
+
+                  <button
+                    className={`pm-btn ${
+                      loadingRecording[meeting.id] ? "pm-btn-loading" : ""
+                    }`}
+                    onClick={() =>
+                      handleRequestRecording(meeting.id, meeting.title)
+                    }
+                    disabled={loadingRecording[meeting.id]}
+                  >
+                    {loadingRecording[meeting.id] ? (
+                      <>
+                        <div className="pm-btn-spinner"></div>
+                        Requesting...
+                      </>
+                    ) : (
+                      "🎥 Request Recording"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ))

@@ -1,12 +1,14 @@
 // src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import CalendarView from './components/calendar/CalendarView';
-import RequestMeetingForm from './components/meeting/RequestMeetingForm';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import CalendarView from "./components/calendar/CalendarView";
+import RequestMeetingForm from "./components/meeting/RequestMeetingForm";
 import PreviousMeeting from "./components/meeting/PreviousMeeting";
-import MeetingStatus from './components/meeting/MeetingStatus';
+import MeetingStatus from "./components/meeting/MeetingStatus";
 import { MeetingProvider } from "../src/components/context/MeetingContext";
+import ForgotPasswordRequest from "./pages/ForgetPass.jsx";
+import ResetPass from "./pages/ResetPass.jsx";
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="previous" element={<PreviousMeeting />} />
             <Route path="stat" element={<MeetingStatus />} />
           </Route>
+          <Route path="/forgot-password" element={<ForgotPasswordRequest />} />
+          <Route path="/reset-password" element={<ResetPass />} />
         </Routes>
       </MeetingProvider>
     </Router>

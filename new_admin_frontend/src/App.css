@@ -79,6 +79,16 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
+    flex-direction: column;
+  gap: 20px;
+}
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(255, 255, 255, 0.3);
+  border-top: 5px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .header-buttons {
@@ -688,4 +698,253 @@ td, th{
 
 .close-form-btn:active {
   transform: translateY(0);
+}
+.request-meeting{
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  padding: 8px 16px;
+  margin-top: 300px;
+  margin-bottom: 10px;
+  margin-left: 1350px;
+}
+
+.dropdown-toggle {
+  padding: 8px 16px;
+  background-color: orange;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 5;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  background: white;
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+  color: white;
+}
+
+.forgot {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9em;
+  text-decoration: underline;
+  margin-top: 5px;
+  display: inline-block;
+}
+
+.forgot:hover {
+  color: #0056b3;
+}
+.forgot:focus {
+  outline: none;
+  text-decoration: none;
+}
+
+/* Notification Popup */
+.notification-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 400px;
+  border-left: 4px solid #007bff;
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification-popup.success {
+  border-left-color: #28a745;
+}
+
+.notification-popup.error {
+  border-left-color: #dc3545;
+}
+
+.notification-popup.warning {
+  border-left-color: #ffc107;
+}
+
+.notification-popup.info {
+  border-left-color: #17a2b8;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.notification-icon {
+  font-size: 16px;
+}
+
+.notification-message {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-close:hover {
+  color: #333;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.approve-btn {
+  background: #285fa7;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.approve-btn:hover {
+  background: #fbbf24;
+}
+
+.decline-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.decline-btn:hover {
+  background: #c82333;
+}
+
+/* Recording Status */
+.recording-available {
+  margin-top: 15px;
+  padding: 10px;
+  background: #d4edda;
+  border-radius: 6px;
+  border: 1px solid #c3e6cb;
+}
+
+.success-badge {
+  background: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.recording-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.recording-badge.available {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.recording-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+/* Selected row highlight */
+.selected-row {
+  background-color: #e3f2fd !important;
+}
+
+/* Status badges */
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status.approved {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status.completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.rejected {
+  background: #f8d7da;
+  color: #721c24;
 }

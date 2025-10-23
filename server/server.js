@@ -6,6 +6,7 @@ const meetingRouter = require("./routes/meeting.Router.js");
 const manageMeetingRouter = require("./routes/manageMeeting.Router.js");
 const manageUserRouter = require("./routes/manageUser.Router.js");
 const client = require("./config/new_db.js");
+const resetPassRouter = require("./routes/resetPass.Router.js");
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -24,6 +25,7 @@ app.use("/login", authRouter);
 app.use("/meeting", meetingRouter);
 app.use("/admin", manageMeetingRouter);
 app.use("/manageUser", manageUserRouter);
+app.use("/reset-password", resetPassRouter);
 app.get("/oauth/callback", async (req, res) => {
   const { code } = req.query;
   console.log("Authorization code:", code);

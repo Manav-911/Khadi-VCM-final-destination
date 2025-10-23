@@ -72,7 +72,7 @@ const adminLogin = async (req, res) => {
         officeId: admin.office,
       },
       JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "9h" }
     );
 
     res.status(200).json({ success: true, token });

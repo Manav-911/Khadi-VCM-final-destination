@@ -28,8 +28,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-console.log(process.env.EMAIL);
-console.log(process.env.PASSWORD);
+//console.log(process.env.EMAIL);
+//console.log(process.env.PASSWORD);
+
+async function sendResetEmail({ to, resetUrl, name }) {
+  const html = `
+    <p>Hi ${name || "there"},</p>
+    <p>You requested a password reset. Click the link below to set a new password. This link will expire in ${
+      process.env.PASSWORD_RESET_TOKEN_EXPIRATION_MIN || 60
+    } minutes.</p>
+    <p><a href="${resetUrl}">Reset your password</a></p>
+    <p>If you didn't request this, you can safely ignore this email.</p>
+    <p>— Your Team</p>
+  `;
+
+  const info = await transporter.sendMail({
+    from: process.env.EMAIL,
+    to,
+    subject: "Reset your password",
+    html,
+  });
+
+  return info;
+}
 
 const updateRejectedMeetings = async () => {
   const now = new Date();
@@ -44,10 +65,10 @@ const updateRejectedMeetings = async () => {
     );
 
     if (result.rowCount > 0) {
-      console.log("Auto-rejected overdue pending meetings:", result.rows);
+      //console.log("Auto-rejected overdue pending meetings:", result.rows);
     }
 
-    console.log(`Auto-rejected ${result.rowCount} overdue pending meetings`);
+    // console.log(`Auto-rejected ${result.rowCount} overdue pending meetings`);
   } catch (err) {
     console.error("updateRejectedMeetings error:", err);
   }
@@ -66,7 +87,7 @@ const updateCompletedMeetings = async () => {
     );
 
     if (result.rowCount > 0) {
-      console.log("Completed meetings updated:", result.rows);
+      //console.log("Completed meetings updated:", result.rows);
     }
 
     for (const meeting of result.rows) {
@@ -76,14 +97,14 @@ const updateCompletedMeetings = async () => {
     await updateRejectedMeetings();
 
     await deleteOldAttendance();
-    console.log(`Updated ${result.rowCount} meetings to 'completed'`);
+    //console.log(`Updated ${result.rowCount} meetings to 'completed'`);
   } catch (err) {
     console.error("updateCompletedMeetings error:", err);
   }
 };
 
 const autoFetchAttendence = async (meetingId) => {
-  console.log(`🔍 IN autofetchAtt for meeting: ${meetingId}`);
+  //console.log(`🔍 IN autofetchAtt for meeting: ${meetingId}`);
 
   try {
     // Check if attendance already exists
@@ -93,9 +114,9 @@ const autoFetchAttendence = async (meetingId) => {
     );
 
     if (existing.rows.length > 0) {
-      console.log(
-        `⏩ Attendance already exists for meeting ${meetingId}, skipping...`
-      );
+      //console.log(
+      // `⏩ Attendance already exists for meeting ${meetingId}, skipping...`
+      //);
       return;
     }
 
@@ -109,7 +130,7 @@ const autoFetchAttendence = async (meetingId) => {
     );
 
     if (meeting.rows.length === 0) {
-      console.log(`❌ No meeting found with ID: ${meetingId}`);
+      //console.log(`❌ No meeting found with ID: ${meetingId}`);
       return;
     }
 
@@ -123,17 +144,17 @@ const autoFetchAttendence = async (meetingId) => {
 
     // Check if webex_meeting_id exists
     if (!meetingData.webex_meeting_id) {
-      console.log(`❌ No webex_meeting_id for meeting ${meetingId}`);
+      //console.log(`❌ No webex_meeting_id for meeting ${meetingId}`);
       return;
     }
 
     const accessToken = await getValidAccessToken(meetingData);
-    console.log(`🔑 Access token obtained: ${accessToken ? "Yes" : "No"}`);
+    //console.log(`🔑 Access token obtained: ${accessToken ? "Yes" : "No"}`);
 
     // Fetch participants from Webex
-    console.log(
-      `🌐 Calling Webex API for meeting: ${meetingData.webex_meeting_id}`
-    );
+    // console.log(
+    //   `🌐 Calling Webex API for meeting: ${meetingData.webex_meeting_id}`
+    // );
 
     const response = await axios.get(
       `https://webexapis.com/v1/meetingParticipants?meetingId=${meetingData.webex_meeting_id}`,
@@ -146,11 +167,11 @@ const autoFetchAttendence = async (meetingId) => {
       }
     );
 
-    console.log(`✅ Webex API Response Status: ${response.status}`);
-    console.log(`📊 Participants data:`, {
-      itemCount: response.data.items?.length,
-      hasData: !!response.data.items,
-    });
+    // console.log(`✅ Webex API Response Status: ${response.status}`);
+    // console.log(`📊 Participants data:`, {
+    //   itemCount: response.data.items?.length,
+    //   hasData: !!response.data.items,
+    // });
 
     // Save to database
     await pool.query(
@@ -159,7 +180,7 @@ const autoFetchAttendence = async (meetingId) => {
       [meetingId, meetingData.webex_meeting_id, JSON.stringify(response.data)]
     );
 
-    console.log(`✅ Auto-saved attendance for meeting ${meetingId}`);
+    c; //onsole.log(`✅ Auto-saved attendance for meeting ${meetingId}`);
   } catch (error) {
     console.error(`❌ Auto-attendance failed for ${meetingId}:`, {
       message: error.message,
@@ -170,7 +191,7 @@ const autoFetchAttendence = async (meetingId) => {
 };
 
 const autoFetchMissingAttendence = async () => {
-  console.log("In missing aTT");
+  //console.log("In missing aTT");
 
   try {
     const missing = await pool.query(
@@ -193,11 +214,11 @@ const deleteOldAttendance = async () => {
     );
 
     if (result.rowCount > 0) {
-      console.log(
-        `DELETED meeting attendance ${result.rowCount} old attendance records (16+days)`
-      );
+      // console.log(
+      //   `DELETED meeting attendance ${result.rowCount} old attendance records (16+days)`
+      // );
     } else {
-      console.log("No old attendance");
+      //console.log("No old attendance");
     }
   } catch (error) {
     console.error("ERROR in deleting attendance :", err);
@@ -258,7 +279,7 @@ const getPendingRequests = async (req, res) => {
         };
       })
     );
-    console.log("Enriched", enriched);
+    //console.log("Enriched", enriched);
 
     res.json(enriched);
   } catch (err) {
@@ -820,6 +841,7 @@ const addMeeting = async (req, res) => {
 const acceptMeetingRecordingRequest = async (req, res) => {
   const { request_id } = req.body;
   const adminId = req.user.userId;
+  console.log("REQ ID", request_id);
 
   try {
     // 1. Get recording request details
@@ -840,6 +862,7 @@ const acceptMeetingRecordingRequest = async (req, res) => {
     `;
 
     const requestResult = await pool.query(requestQuery, [request_id]);
+    console.log(requestResult);
 
     if (requestResult.rows.length === 0) {
       return res.status(404).json({ message: "Recording request not found" });
@@ -868,17 +891,33 @@ const acceptMeetingRecordingRequest = async (req, res) => {
       }
     );
 
-    // 4. Check if recording exists
-    if (recordingsRes.data.items.length === 0) {
+    console.log("WEBEX", recordingRequest);
+
+    // 4. Check if recording exists - WITH PROPER NULL CHECKS
+    if (
+      !recordingsRes.data ||
+      !recordingsRes.data.items ||
+      recordingsRes.data.items.length === 0
+    ) {
       return res.status(404).json({
         message: "Recording not yet available in Webex",
       });
     }
 
-    // 5. Get recording URL
+    // 5. Get recording URL - WITH PROPER NULL CHECKS
     const recording = recordingsRes.data.items[0];
     const recordingUrl =
-      recording.downloadUrl || recording.playbackUrl || recording.shareUrl;
+      (recording &&
+        (recording.downloadUrl ||
+          recording.playbackUrl ||
+          recording.shareUrl)) ||
+      null;
+
+    if (!recordingUrl) {
+      return res.status(404).json({
+        message: "Recording found but no accessible URL available",
+      });
+    }
 
     console.log(`Recording found: ${recordingUrl}`);
 
@@ -886,11 +925,13 @@ const acceptMeetingRecordingRequest = async (req, res) => {
     const updateResult = await pool.query(
       `UPDATE meeting_recording_requests
        SET status = 'completed', 
-           recording_url = $1, 
+           recording_url = $1
        WHERE id = $2
        RETURNING *;`,
       [recordingUrl, request_id]
     );
+
+    console.log("UPDTEDDDDDDDDDDD", updateResult);
 
     const updatedRequest = updateResult.rows[0];
 
@@ -1006,9 +1047,27 @@ const rejectMeetingRecordingRequest = async (req, res) => {
 
 const getRecordingRequestsByStatus = async (req, res) => {
   const adminOfficeId = req.user.officeId;
-  const { status } = req.params; // 'pending', 'approved', 'completed', 'rejected'
+  const { status } = req.params;
+
+  console.log(
+    "🔍 Fetching recording requests - Office:",
+    adminOfficeId,
+    "Status:",
+    status
+  );
+
+  // Validate status parameter
+  const validStatuses = ["pending", "approved", "completed", "rejected"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      error:
+        "Invalid status. Must be one of: pending, approved, completed, rejected",
+    });
+  }
 
   try {
+    console.log("📊 Executing database query...");
+
     const result = await pool.query(
       `
       SELECT 
@@ -1020,16 +1079,20 @@ const getRecordingRequestsByStatus = async (req, res) => {
         m.title as meeting_title,
         m.start_time,
         m.duration_minutes,
+        m.webex_meeting_id,
         u.name as requester_name,
-        u.email as requester_email,
-        u.department as requester_department
+        u.email as requester_email
       FROM meeting_recording_requests mrr
       JOIN meetings m ON mrr.meeting_id = m.id
       JOIN users u ON mrr.requested_by = u.id
       WHERE u.office = $1 AND mrr.status = $2
       ORDER BY mrr.requested_at DESC
-    `,
+      `,
       [adminOfficeId, status]
+    );
+
+    console.log(
+      `✅ Found ${result.rows.length} recording requests with status: ${status}`
     );
 
     res.json({
@@ -1039,8 +1102,28 @@ const getRecordingRequestsByStatus = async (req, res) => {
       requests: result.rows,
     });
   } catch (err) {
-    console.error("Error fetching recording requests by status:", err);
-    res.status(500).json({ error: "Database error" });
+    console.error("💥 Error fetching recording requests by status:", err);
+
+    // More specific error messages
+    if (err.code === "42P01") {
+      // Table doesn't exist
+      res.status(500).json({
+        error: "Database table missing. Please contact administrator.",
+        details: "meeting_recording_requests table not found",
+      });
+    } else if (err.code === "42703") {
+      // Column doesn't exist
+      res.status(500).json({
+        error: "Database schema issue. Please contact administrator.",
+        details: err.message,
+      });
+    } else {
+      res.status(500).json({
+        error: "Database error",
+        details:
+          process.env.NODE_ENV === "development" ? err.message : undefined,
+      });
+    }
   }
 };
 

@@ -163,3 +163,22 @@
 .form-group input.error {
   border-color: red;
 }
+.forgot {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9em;
+  text-decoration: underline;
+  margin-top: 5px;
+  display: inline-block;
+  padding-left: 250px;
+}
+
+.forgot:hover {
+  color: #0056b3;
+}
+.forgot:focus {
+  outline: none;
+  text-decoration: none;
+}
