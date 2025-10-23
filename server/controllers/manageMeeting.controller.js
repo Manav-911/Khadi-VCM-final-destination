@@ -307,29 +307,28 @@ const getAvailableLicenses = async (req, res) => {
 
 const approveMeeting = async (req, res) => {
   const { meeting_id } = req.body;
+  console.log(req.body);
 
   try {
-    updateCompletedMeetings();
+
+    // updateCompletedMeetings();
+    console.log("Step 1: Loaded meeting request ✅", meeting_id);
+
     const meetingRes = await pool.query(
-      `SELECT 
-      m.id,
-      m.title,
-      m.start_time,
-      m.duration_minutes,
-      m.want_room,
-      u.office,
-      m.description,
-      m.status,
-      u.email AS requester_email
-   FROM meetings m
-   JOIN users u ON m.requested_by = u.id
-   WHERE m.id = $1`,
+      `SELECT m.id, m.title, m.start_time, m.duration_minutes,
+      m.want_room, u.office, m.description, m.status, u.email AS requester_email
+      FROM meetings m
+      JOIN users u ON m.requested_by = u.id
+      WHERE m.id = $1`,
       [meeting_id]
     );
-    if (meetingRes.rows.length === 0)
-      return res.status(404).json({ message: "Meeting not found" });
 
-    const meeting = meetingRes.rows[0];
+if (meetingRes.rows.length === 0)
+  return res.status(404).json({ message: "Meeting not found" });
+
+const meeting = meetingRes.rows[0];
+console.log("Step 2: Meeting found ✅", meeting);
+
     console.log("meeting", meetingRes.rows);
 
     const officeId = meeting.office;
@@ -345,6 +344,8 @@ const approveMeeting = async (req, res) => {
       return res
         .status(400)
         .json({ message: "No licenses available for this office" });
+
+    console.log("Step 3: License list loaded ✅", licenseRes.rows);
 
     const licenseIds = licenseRes.rows.map((l) => l.id);
     const licenseMeetings = await pool.query(
@@ -366,6 +367,10 @@ const approveMeeting = async (req, res) => {
     );
     if (!availableLicense)
       return res.status(400).json({ message: "No license available" });
+
+    console.log("Step 4: Available License ✅", availableLicense);
+
+    // ===== ROOM CHECK =====
 
     // find room if needed
     let assignedRoom = null;
@@ -395,6 +400,7 @@ const approveMeeting = async (req, res) => {
         return res.status(400).json({ message: "No room available" });
     }
 
+    console.log("✅ Assigned Room:", assignedRoom);
     // Get full license details including tokens
     const licenseDetails = await pool.query(
       `SELECT * FROM licenses WHERE id = $1`,
@@ -416,8 +422,15 @@ const approveMeeting = async (req, res) => {
     const endISO = new Date(
       new Date(meeting.start_time).getTime() + meeting.duration_minutes * 60000
     ).toISOString();
-
     console.log("🔄 Creating Webex meeting...");
+    console.log("Meeting Details:", {
+      title: meeting.title,
+      start: startISO,
+      end: endISO,
+      duration: meeting.duration_minutes,
+      timezone: "Asia/Kolkata"
+    });
+
 
     const webexMeetingRes = await axios.post(
       "https://webexapis.com/v1/meetings",
@@ -425,6 +438,9 @@ const approveMeeting = async (req, res) => {
         title: meeting.title,
         start: startISO,
         end: endISO,
+        // timezone: "Asia/Kolkata",   // ✅ REQUIRED
+        enabledAutoRecordMeeting: false,
+        allowAnyUserToBeCoHost: false,
         agenda: meeting.description || "Meeting created by system",
       },
       {
@@ -487,6 +503,7 @@ const approveMeeting = async (req, res) => {
         })
       )
     );
+    console.log("✅ Emails sent");
 
     console.log("Emails sent to participants:", participantsEmails);
 
@@ -497,9 +514,14 @@ const approveMeeting = async (req, res) => {
       assignedRoom: assignedRoom ? assignedRoom.id : null,
       link: meeting_link,
     });
+
   } catch (err) {
     console.error("approveMeeting error:", err);
-    res.status(500).json({ error: "DB error" });
+    return res.status(500).json({
+    success: false,
+    message: err.message || "Internal server error",
+    error: err.response?.data || null
+  });
   }
 };
 

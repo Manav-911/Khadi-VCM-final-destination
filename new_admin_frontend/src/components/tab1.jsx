@@ -16,6 +16,7 @@ function tab1() {
   const [fetchMeetings, setfetchMeetings] = useState(null);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [availableLicenses, setAvailableLicenses] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   //check Availability
   useEffect(() => {
@@ -45,11 +46,16 @@ function tab1() {
   const handleApprove = async () => {
     if (!selectedMeeting) return;
 
+    setIsSubmitting(true);
+
     try {
       const res = await axiosInstance.post(
-        "http://localhost:3000/admin/approve-meeting",
+        "/admin/approve-meeting",
         {
           meeting_id: selectedMeeting.id,
+        },
+        {
+          timeout: 30000,
         }
       );
 
@@ -70,15 +76,22 @@ function tab1() {
       console.error("Error approving meeting:", err);
       alert(err.response?.data?.message || "Approval failed");
     }
+    finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDecline = async () => {
     if (!selectedMeeting) return;
+    setIsSubmitting(true);
     try {
       const res = await axiosInstance.post(
         "http://localhost:3000/admin/reject-meeting",
         {
           meeting_id: selectedMeeting.id,
+        },
+        {
+          timeout: 30000,
         }
       );
 
@@ -96,8 +109,11 @@ function tab1() {
         }`
       );
     } catch (err) {
-      console.error("Error approving meeting:", err);
-      alert(err.response?.data?.message || "Approval failed");
+      console.error("Error declining meeting:", err);
+      alert(err.response?.data?.message || "Decline failed");
+    }
+    finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -189,6 +205,12 @@ function tab1() {
               <button className="decline-btn" onClick={handleDecline}>
                 DECLINE
               </button>
+              {isSubmitting && (
+                <div className="model-overlay">
+                  <div className="spinner"></div>
+                  <div className="loading-text">Processing...</div>
+                </div>
+              )}
             </>
           )}
         </>

@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with default config
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:3000', // Your backend URL
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // 30 seconds timeout
   withCredentials: true, // Send cookies and auth headers
   headers: {
     'Content-Type': 'application/json',
