@@ -1,6 +1,8 @@
 const supabase = require("../config/db.js");
 const { get } = require("../routes/auth.Router.js");
 const pool = require("../config/new_db.js");
+const { getValidAccessToken } = require("./manageMeeting.controller.js");
+const axios = require("axios");
 
 async function checkLicense(officeId, newStartTime, endTime) {
   try {
@@ -407,7 +409,7 @@ const cancelUserMeeting = async (req, res) => {
       await cancelWebexMeeting(meeting);
     }
 
-    await pool.query(`UPDATE meeting SET status = 'cancelled' WHERE id = $1`, [
+    await pool.query(`UPDATE meetings SET status = 'cancelled' WHERE id = $1`, [
       meetingId,
     ]);
 
@@ -423,7 +425,7 @@ const cancelUserMeeting = async (req, res) => {
       meeting_id: meetingId,
     });
   } catch (error) {
-    console.error("Error cancelling meeting:", err);
+    console.error("Error cancelling meeting:", error);
     res.status(500).json({
       success: false,
       error: "Failed to cancel meeting",
@@ -628,10 +630,6 @@ const getMeetingAttendance = async (req, res) => {
 
     const meetingData = meetingResult.rows[0];
 
-    // if (userRole !== 'admin' && meetingData.requester_id !== userId) {
-    //   return res.status(403).json({ error: "Access denied" });
-    // }
-
     // 2. Get attendance data
     const attendanceRes = await pool.query(
       `SELECT attendance_data FROM meeting_attendance WHERE meeting_id = $1`,
@@ -657,20 +655,81 @@ const getMeetingAttendance = async (req, res) => {
       }
     }
 
-    // 4. Process the data (handle different possible structures)
-    const participants =
-      attendanceData.items ||
-      attendanceData.participants ||
-      attendanceData ||
-      [];
+    console.log("🔍 Raw attendance data structure:", {
+      type: typeof attendanceData,
+      keys: Object.keys(attendanceData),
+      hasItems: !!attendanceData.items,
+      hasParticipants: !!attendanceData.participants,
+      sampleItem:
+        attendanceData.items?.[0] ||
+        attendanceData.participants?.[0] ||
+        attendanceData[0],
+    });
 
-    const processed = participants.map((p) => ({
-      name: p.displayName || p.name || "Unknown",
-      email: p.email || "",
-      attended: p.joinTime != null,
-      joinTime: p.joinTime ? new Date(p.joinTime).toLocaleString() : null,
-      duration: p.duration ? Math.round(p.duration / 60000) + " mins" : "N/A",
-    }));
+    // 4. Process the data (handle different possible structures)
+    let participants = [];
+
+    if (Array.isArray(attendanceData)) {
+      participants = attendanceData;
+    } else if (Array.isArray(attendanceData.items)) {
+      participants = attendanceData.items;
+    } else if (Array.isArray(attendanceData.participants)) {
+      participants = attendanceData.participants;
+    } else if (
+      attendanceData.attendance &&
+      Array.isArray(attendanceData.attendance.participants)
+    ) {
+      participants = attendanceData.attendance.participants;
+    } else {
+      console.warn("⚠️ Unexpected attendance structure:", attendanceData);
+      participants = [];
+    }
+
+    console.log(`👥 Processing ${participants.length} participants`);
+
+    const processed = participants.map((p, index) => {
+      console.log(`🔍 Participant ${index}:`, p);
+
+      // Normalize possible field names
+      const joinTime =
+        p.joinedTime || p.joinTimeUTC || p.join_time || p.startTime || null;
+      const leaveTime =
+        p.leaveTime || p.leaveTimeUTC || p.leave_time || p.endTime || null;
+      const duration =
+        p.duration ||
+        p.durationMinutes ||
+        p.durationSeconds ||
+        p.totalDuration ||
+        0;
+
+      const hasJoinTime = !!joinTime;
+      const hasLeaveTime = !!leaveTime;
+      const hasDuration = !!duration && duration > 0;
+
+      const attended = hasJoinTime || hasLeaveTime || hasDuration;
+
+      let durationMinutes = "N/A";
+      if (duration) {
+        const durationMs = duration > 10000 ? duration : duration * 1000; // handle seconds vs ms
+        durationMinutes = Math.round(durationMs / 60000) + " mins";
+      } else if (joinTime && leaveTime) {
+        const join = new Date(joinTime);
+        const leave = new Date(leaveTime);
+        durationMinutes = Math.round((leave - join) / 60000) + " mins";
+      }
+
+      return {
+        name: p.displayName || p.name || "Unknown User",
+        email: p.email || "",
+        attended: attended ? true : false,
+        joinTime: joinTime
+          ? new Date(joinTime).toLocaleString()
+          : "Did not join",
+        leaveTime: leaveTime ? new Date(leaveTime).toLocaleString() : "N/A",
+        duration: durationMinutes,
+        rawData: p,
+      };
+    });
 
     const attendedCount = processed.filter((p) => p.attended).length;
     const totalParticipants = processed.length;
@@ -679,12 +738,25 @@ const getMeetingAttendance = async (req, res) => {
         ? Math.round((attendedCount / totalParticipants) * 100)
         : 0;
 
+    console.log("📊 Final attendance summary:", {
+      totalParticipants,
+      attendedCount,
+      attendanceRate,
+      sampleProcessed: processed.slice(0, 3),
+    });
+
     res.json({
       success: true,
       totalParticipants,
       attendedCount,
       attendanceRate,
       participants: processed,
+      // Include debug info
+      debug: {
+        rawDataSample: participants[0],
+        processingLogic:
+          "attended = hasJoinTime || hasLeaveTime || hasDuration",
+      },
     });
   } catch (error) {
     console.error("Error fetching attendance:", error);

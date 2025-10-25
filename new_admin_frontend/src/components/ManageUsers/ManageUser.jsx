@@ -9,33 +9,32 @@ function ManageUser() {
   const [fetchAll, setFetchAll] = useState([]);
   const [action, setAction] = useState("Nouser");
   const [openPopup, setOpenPopup] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Extract fetchUsers to be reusable
+  const fetchUsers = async () => {
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/manageUser/getUsers",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      console.log("Fetched users:", response.data);
+
+      // response.data is now the array directly
+      setFetchAll(Array.isArray(response.data.data) ? response.data.data : []);
+    } catch (err) {
+      console.error(err);
+      setFetchAll([]);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const token = localStorage.getItem("token");
-
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/manageUser/getUsers",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        console.log("Fetched users:", response.data);
-        console.log(fetchAll.length);
-
-        // response.data is now the array directly
-        setFetchAll(
-          Array.isArray(response.data.data) ? response.data.data : []
-        );
-      } catch (err) {
-        console.error(err);
-        setFetchAll([]);
-      }
-    };
-
     fetchUsers();
-  }, []);
+  }, [refreshTrigger]); // Add refreshTrigger as dependency
 
   const handleRemoveUser = async (id) => {
     const token = localStorage.getItem("token");
@@ -50,7 +49,9 @@ function ManageUser() {
       );
 
       if (response.data.success) {
-        setFetchAll((prevUsers) => prevUsers.filter((user) => user.id !== id));
+        console.log("User removed successfully");
+        // Refresh the user list
+        setRefreshTrigger((prev) => prev + 1);
       } else {
         console.error("Failed to remove user:", response.data.message);
       }
@@ -59,11 +60,29 @@ function ManageUser() {
     }
   };
 
+  const handleUserAdded = () => {
+    // Refresh the user list when a new user is added
+    console.log("User added, refreshing list...");
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleClosePopup = () => {
+    setAction("Nouser");
+    setOpenPopup(false);
+  };
+
   return (
     <>
-      <button className="add-user-btn" onClick={() => {setAction("user"); setOpenPopup(true)}}>
+      <button
+        className="add-user-btn"
+        onClick={() => {
+          setAction("user");
+          setOpenPopup(true);
+        }}
+      >
         ADD USER
       </button>
+
       <table className="meeting-table">
         <thead>
           <tr className="meeting-table tr">
@@ -99,18 +118,16 @@ function ManageUser() {
           )}
         </tbody>
       </table>
+
       {action === "user" && openPopup && (
         <div className="model-overlay">
           <AddUser
             open={true}
-            onClose={() => {
-              setAction("Nouser");
-              setOpenPopup(false);
-            }}
+            onClose={handleClosePopup}
+            onUserAdded={handleUserAdded} // Pass the callback
           />
         </div>
-)}
-
+      )}
     </>
   );
 }

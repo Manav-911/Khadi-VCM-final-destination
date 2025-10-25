@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useMeetingContext } from "../../context/MeetingContext.jsx";
 import ParticipantSelector from "./ParticipantSelector";
 import "../meeting/requestmeetingform.css";
+import axios from "axios";
 
 export default function RequestMeetingForm({ open, onClose }) {
   const [formData, setFormData] = useState({
@@ -72,38 +73,44 @@ export default function RequestMeetingForm({ open, onClose }) {
       return;
     }
 
-    const startDateTime = new Date(date);
-    const hour24 = (hour % 12) + (isPM && hour !== 12 ? 12 : 0);
-    startDateTime.setHours(hour24);
-    startDateTime.setMinutes(minute);
-    startDateTime.setSeconds(0);
-    startDateTime.setMilliseconds(0);
+    // Step 1: Create date with user's IST time
+    const userISTDate = new Date(date);
+    let hour24 = hour;
+    if (isPM && hour < 12) {
+      hour24 = hour + 12;
+    } else if (!isPM && hour === 12) {
+      hour24 = 0;
+    }
+    userISTDate.setHours(hour24, minute, 0, 0);
 
-    const formattedDateTime = `${startDateTime.getFullYear()}-${pad(
-      startDateTime.getMonth() + 1
-    )}-${pad(startDateTime.getDate())}T${pad(startDateTime.getHours())}:${pad(
-      startDateTime.getMinutes()
-    )}:${pad(startDateTime.getSeconds())}`;
+    const utcDateString = userISTDate.toISOString();
+
+    console.log("🕐 TIME CONVERSION:");
+    console.log(
+      "User entered:",
+      `${hour}:${minute.toString().padStart(2, "0")} ${formData.amPm} IST`
+    );
+    console.log("As UTC for DB:", utcDateString);
+    console.log("Will display as:", userISTDate.toLocaleString("en-IN"));
+
+    const allparticipants = [...(formData.participants.individuals || [])];
 
     const payload = {
       title: formData.title,
       description: formData.description,
-      start_time: formattedDateTime,
+      start_time: utcDateString, // Store as UTC
       duration_minutes:
         parseInt(formData.durationHours || 0) * 60 +
         parseInt(formData.durationMinutes || 0),
       want_room: formData.wantsConferenceRoom,
       status: "pending",
-      participants: {
-        individuals: formData.participants.individuals || [],
-        offices: formData.participants.offices || [],
-      },
+      participants: allparticipants,
     };
 
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:3000/meeting/requestMeeting",
+        "http://localhost:3000/admin/add-admin-meeting",
         payload,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -111,21 +118,6 @@ export default function RequestMeetingForm({ open, onClose }) {
       );
       alert("Meeting request submitted!");
       triggerRefresh();
-
-      // Reset form and close modal
-      setFormData({
-        title: "",
-        date: null,
-        startHour: "",
-        startMinute: "",
-        amPm: "AM",
-        durationHours: "",
-        durationMinutes: "",
-        wantsConferenceRoom: false,
-        description: "",
-        participants: { individuals: [], offices: [] },
-      });
-      onClose();
     } catch (err) {
       console.error("Submission error:", err.response?.data || err.message);
       alert("Submission failed");

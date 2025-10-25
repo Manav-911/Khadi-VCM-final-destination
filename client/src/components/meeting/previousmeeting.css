@@ -559,3 +559,174 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+/* Attendance Summary Styles */
+.pm-attendance-summary {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  border-left: 4px solid #007bff;
+}
+
+.attendance-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stat-item {
+  font-size: 14px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+/* Expand/Collapse Button */
+.pm-expand-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background-color 0.2s;
+}
+
+.pm-expand-btn:hover {
+  background: #0056b3;
+}
+
+/* Full Participants List */
+.attendance-full-list {
+  margin-top: 10px;
+}
+
+.attendance-header h4 {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 14px;
+}
+
+.participants-scroll-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: white;
+}
+
+.participant-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s;
+}
+
+.participant-item:last-child {
+  border-bottom: none;
+}
+
+.participant-item:hover {
+  background-color: #f8f9fa;
+}
+
+.participant-item.present {
+  border-left: 3px solid #28a745;
+}
+
+.participant-item.absent {
+  border-left: 3px solid #dc3545;
+  opacity: 0.7;
+}
+
+.participant-status {
+  font-size: 16px;
+  margin-right: 10px;
+  margin-top: 2px;
+}
+
+.participant-details {
+  flex: 1;
+}
+
+.participant-name {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 2px;
+}
+
+.participant-email {
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 2px;
+}
+
+.participant-duration,
+.participant-time {
+  font-size: 11px;
+  color: #868e96;
+}
+
+/* Preview Styles */
+.attendance-preview {
+  margin-top: 8px;
+}
+
+.preview-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 6px;
+}
+
+.preview-participants {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-attendee {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.more-attendees {
+  font-size: 11px;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.no-attendees {
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Scrollbar Styling */
+.participants-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.participants-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.participants-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.participants-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

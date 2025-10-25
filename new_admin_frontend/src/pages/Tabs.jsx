@@ -28,9 +28,9 @@ function TabsTemp() {
       <div className="content">
         <div className="left-panel">
           <div className="button-group">
-            <button className="btn" onClick={() => setOpenPopup(true)}>
+            {/* <button className="btn" onClick={() => setOpenPopup(true)}>
               Create Meeting
-            </button>
+            </button> */}
             <button className="btn" onClick={() => setUser("manage")}>
               Manage user
             </button>

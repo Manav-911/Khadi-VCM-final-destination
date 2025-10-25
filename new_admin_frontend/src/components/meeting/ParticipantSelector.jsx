@@ -108,7 +108,7 @@ export default function ParticipantSelector({
       .map((p) => p.name);
 
     onSelect({
-      individuals: selectedParticipantNames, // names only
+      individuals: selectedIndividuals, // names only
       offices: selectedOffices,
     });
     onClose();

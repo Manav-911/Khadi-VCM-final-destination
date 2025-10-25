@@ -16,6 +16,7 @@ function tab1() {
   const [fetchMeetings, setfetchMeetings] = useState(null);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [availableLicenses, setAvailableLicenses] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   //check Availability
   useEffect(() => {
@@ -69,6 +70,8 @@ function tab1() {
           res.data.assignedRoom || "Not required"
         }`
       );
+
+      await fetchallMeetings();
     } catch (err) {
       console.error("Error approving meeting:", err);
       alert(err.response?.data?.message || "Approval failed");
@@ -93,31 +96,29 @@ function tab1() {
       console.error("Error declining meeting:", err);
     }
   };
-
-  useEffect(() => {
-    const fetchallMeetings = async () => {
-      try {
-        const response = await axiosInstance.get(
-          "http://localhost:3000/admin/pending-request",
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        if (response.data) {
-          setfetchMeetings(response.data);
-          console.log("Fetched meetings:", response.data);
-          setFetchError(null);
+  const fetchallMeetings = async () => {
+    try {
+      const response = await axiosInstance.get(
+        "http://localhost:3000/admin/pending-request",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-      } catch (error) {
-        console.error("Error fetching meetings:", error);
-        setFetchError("Could not fetch data");
-        setfetchMeetings(null);
-      }
-    };
+      );
 
+      if (response.data) {
+        setfetchMeetings(response.data);
+        console.log("Fetched meetings:", response.data);
+        setFetchError(null);
+      }
+    } catch (error) {
+      console.error("Error fetching meetings:", error);
+      setFetchError("Could not fetch data");
+      setfetchMeetings(null);
+    }
+  };
+  useEffect(() => {
     fetchallMeetings();
   }, []);
 

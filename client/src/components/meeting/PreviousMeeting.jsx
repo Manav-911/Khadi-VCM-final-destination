@@ -13,6 +13,7 @@ export default function PreviousMeeting() {
   const [requestStatus, setRequestStatus] = useState({}); // Track request status per meeting
   const [loadingAttendance, setLoadingAttendance] = useState({}); // Track loading state for attendance
   const [attendanceData, setAttendanceData] = useState({}); // Store attendance data per meeting
+  const [expandedMeeting, setExpandedMeeting] = useState(null); // Track which meeting's attendance is expanded
 
   const fetchMeetings = async () => {
     try {
@@ -176,12 +177,15 @@ export default function PreviousMeeting() {
         [meetingId]: response.data,
       }));
 
+      // Auto-expand the attendance view
+      setExpandedMeeting(meetingId);
+
       // Show success message
       setRequestStatus((prev) => ({
         ...prev,
         [meetingId]: {
           success: true,
-          message: `Attendance data loaded! Total participants: ${response.data.totalParticipants}`,
+          message: `Attendance data loaded! ${response.data.attendedCount} out of ${response.data.totalParticipants} participants attended.`,
         },
       }));
     } catch (err) {
@@ -223,6 +227,11 @@ export default function PreviousMeeting() {
         });
       }, 5000);
     }
+  };
+
+  // Toggle expanded view for attendance
+  const toggleExpandedView = (meetingId) => {
+    setExpandedMeeting(expandedMeeting === meetingId ? null : meetingId);
   };
 
   // Filter meetings by search and date
@@ -304,36 +313,119 @@ export default function PreviousMeeting() {
                 {attendanceData[meeting.id] && (
                   <div className="pm-attendance-summary">
                     <div className="attendance-stats">
-                      <span>
-                        👥 {attendanceData[meeting.id].totalParticipants} Total
+                      <span className="stat-item">
+                        <strong>👥 Total:</strong>{" "}
+                        {attendanceData[meeting.id].totalParticipants}
                       </span>
-                      <span>
-                        ✅ {attendanceData[meeting.id].attendedCount} Present
+                      <span className="stat-item">
+                        <strong>✅ Present:</strong>{" "}
+                        {attendanceData[meeting.id].attendedCount}
                       </span>
-                      <span>
-                        📊 {attendanceData[meeting.id].attendanceRate}% Rate
+                      <span className="stat-item">
+                        <strong>📊 Rate:</strong>{" "}
+                        {attendanceData[meeting.id].attendanceRate}%
                       </span>
                     </div>
-                    <div className="attendance-preview">
-                      {attendanceData[meeting.id].participants
-                        .slice(0, 3)
-                        .map((p, index) => (
-                          <span
-                            key={index}
-                            className={`attendee ${
-                              p.attended ? "present" : "absent"
-                            }`}
-                          >
-                            {p.attended ? "✅" : "❌"} {p.name}
-                          </span>
-                        ))}
-                      {attendanceData[meeting.id].participants.length > 3 && (
-                        <span className="more-attendees">
-                          +{attendanceData[meeting.id].participants.length - 3}{" "}
-                          more
-                        </span>
-                      )}
-                    </div>
+
+                    {/* Expand/Collapse Button */}
+                    <button
+                      className="pm-expand-btn"
+                      onClick={() => toggleExpandedView(meeting.id)}
+                    >
+                      {expandedMeeting === meeting.id
+                        ? "▲ Collapse"
+                        : "▼ Show All Participants"}
+                    </button>
+
+                    {/* Scrollable Participants List */}
+                    {expandedMeeting === meeting.id && (
+                      <div className="attendance-full-list">
+                        <div className="attendance-header">
+                          <h4>
+                            All Participants (
+                            {attendanceData[meeting.id].participants.length})
+                          </h4>
+                        </div>
+                        <div className="participants-scroll-container">
+                          {attendanceData[meeting.id].participants.map(
+                            (participant, index) => (
+                              <div
+                                key={index}
+                                className={`participant-item ${
+                                  participant.attended ? "present" : "absent"
+                                }`}
+                              >
+                                <div className="participant-status">
+                                  {participant.attended ? "✅" : "❌"}
+                                </div>
+                                <div className="participant-details">
+                                  <div className="participant-name">
+                                    {participant.name}
+                                  </div>
+                                  {participant.email && (
+                                    <div className="participant-email">
+                                      {participant.email}
+                                    </div>
+                                  )}
+                                  {participant.attended &&
+                                    participant.duration && (
+                                      <div className="participant-duration">
+                                        Duration: {participant.duration}
+                                      </div>
+                                    )}
+                                  {participant.attended &&
+                                    participant.joinTime && (
+                                      <div className="participant-time">
+                                        Joined: {participant.joinTime}
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Compact Preview (when not expanded) */}
+                    {expandedMeeting !== meeting.id && (
+                      <div className="attendance-preview">
+                        <div className="preview-header">
+                          <strong>Quick Preview:</strong>
+                        </div>
+                        <div className="preview-participants">
+                          {attendanceData[meeting.id].participants
+                            .filter((p) => p.attended) // Show only attended participants in preview
+                            .slice(0, 3)
+                            .map((p, index) => (
+                              <span
+                                key={index}
+                                className="preview-attendee present"
+                              >
+                                ✅ {p.name}
+                              </span>
+                            ))}
+                          {attendanceData[meeting.id].participants.filter(
+                            (p) => p.attended
+                          ).length > 3 && (
+                            <span className="more-attendees">
+                              +
+                              {attendanceData[meeting.id].participants.filter(
+                                (p) => p.attended
+                              ).length - 3}{" "}
+                              more attended
+                            </span>
+                          )}
+                          {attendanceData[meeting.id].participants.filter(
+                            (p) => p.attended
+                          ).length === 0 && (
+                            <span className="no-attendees">
+                              No participants attended
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

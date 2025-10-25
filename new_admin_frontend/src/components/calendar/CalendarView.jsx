@@ -35,10 +35,21 @@ export default function CalendarView() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchMeetings();
   }, []);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing calendar...");
+      fetchMeetings();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRefresh = () => {
+    fetchMeetings();
+  };
 
   // Handle meeting click (for viewing only)
   const handleEventClick = (clickInfo) => {
@@ -76,7 +87,9 @@ export default function CalendarView() {
       <div className="calendar-header">
         <h2>Meeting Calendar</h2>
       </div>
-
+      <button className="refresh-btn" onClick={handleRefresh}>
+        🔄 Refresh
+      </button>
       <div className="calendar-instructions">
         💡 Click on meetings to view details
       </div>

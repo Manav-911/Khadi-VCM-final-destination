@@ -18,6 +18,7 @@ const {
   getRecordingRequestsByStatus,
   acceptMeetingRecordingRequest,
   rejectMeetingRecordingRequest,
+  addMeeting,
 } = require("../controllers/manageMeeting.controller.js");
 
 const manageMeetingRouter = express.Router();
@@ -99,4 +100,6 @@ manageMeetingRouter.post(
   isAdmin,
   rejectMeetingRecordingRequest
 );
+
+manageMeetingRouter.post("/add-admin-meeting", authenticateToken, addMeeting);
 module.exports = manageMeetingRouter;
